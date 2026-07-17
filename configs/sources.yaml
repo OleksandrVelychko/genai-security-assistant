@@ -1,0 +1,91 @@
+# Source manifest for the GenAI Security Assistant knowledge base.
+# One entry = one source document. Raw files live in data/raw/ under `source_file`.
+# NOTE: content_hash and retrieved_at are NOT here — the pipeline computes them
+# automatically at ingestion time. This file holds only human-authored provenance.
+
+# ---------------------------------------------------------------------------
+# Controlled vocabularies (curator-assigned metadata).
+# Keep values consistent - they are used later for metadata filtering.
+#
+# document_type - genre of the source:
+#   security_risk: an OWASP Top 10 for LLM risk entry (LLM01..LLM10)
+#   cheat_sheet: OWASP Cheat Sheet Series practical guidance
+#   checklist: governance / compliance checklist
+#
+# risk_category — aligned to OWASP Top 10 for LLM Applications 2025:
+#   prompt_injection                 (LLM01)   [in use]
+#   sensitive_information_disclosure (LLM02)   [in use]
+#   supply_chain                     (LLM03)
+#   data_and_model_poisoning         (LLM04)
+#   improper_output_handling         (LLM05)
+#   excessive_agency                 (LLM06)   [in use]
+#   system_prompt_leakage            (LLM07)
+#   vector_and_embedding_weaknesses  (LLM08)
+#   misinformation                   (LLM09)
+#   unbounded_consumption            (LLM10)
+#   governance : cross-cutting, not one of the 10 OWASP risks  [in use]
+#   general    : fallback when no single risk applies
+# ---------------------------------------------------------------------------
+
+defaults:
+  publisher: "OWASP Gen AI Security Project"
+  language: "en"
+  domain: "genai_security"
+  license: "CC-BY-SA-4.0"
+
+sources:
+  - document_id: owasp_llm01_prompt_injection
+    title: "LLM01:2025 Prompt Injection"
+    source_url: "https://genai.owasp.org/llmrisk/llm01-prompt-injection/"
+    source_file: "owasp_llm01_prompt_injection.html"
+    source_type: html
+    document_type: security_risk
+    risk_category: prompt_injection
+    doc_version: "2025"
+
+  - document_id: owasp_llm02_sensitive_information_disclosure
+    title: "LLM02:2025 Sensitive Information Disclosure"
+    source_url: "https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/"
+    source_file: "owasp_llm02_sensitive_information_disclosure.html"
+    source_type: html
+    document_type: security_risk
+    risk_category: sensitive_information_disclosure
+    doc_version: "2025"
+
+  - document_id: owasp_llm06_excessive_agency
+    title: "LLM06:2025 Excessive Agency"
+    source_url: "https://genai.owasp.org/llmrisk/llm062025-excessive-agency/"
+    source_file: "owasp_llm06_excessive_agency.html"
+    source_type: html
+    document_type: security_risk
+    risk_category: excessive_agency
+    doc_version: "2025"
+
+  - document_id: owasp_cs_prompt_injection_prevention
+    title: "LLM Prompt Injection Prevention Cheat Sheet"
+    source_url: "https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.md"
+    source_file: "owasp_llm_prompt_injection_prevention_cheat_sheet.md"
+    source_type: markdown
+    document_type: cheat_sheet
+    risk_category: prompt_injection
+    publisher: "OWASP Cheat Sheet Series"
+    doc_version: null
+
+  - document_id: owasp_cs_ai_agent_security
+    title: "AI Agent Security Cheat Sheet"
+    source_url: "https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/cheatsheets/AI_Agent_Security_Cheat_Sheet.md"
+    source_file: "owasp_ai_agent_security_cheat_sheet.md"
+    source_type: markdown
+    document_type: cheat_sheet
+    risk_category: excessive_agency
+    publisher: "OWASP Cheat Sheet Series"
+    doc_version: null
+
+  - document_id: owasp_llm_governance_checklist
+    title: "LLM Applications Cybersecurity and Governance Checklist"
+    source_url: "https://genai.owasp.org/resource/llm-applications-cybersecurity-and-governance-checklist-english/"
+    source_file: "owasp_llm_governance_checklist.pdf"
+    source_type: pdf
+    document_type: checklist
+    risk_category: governance
+    doc_version: null
