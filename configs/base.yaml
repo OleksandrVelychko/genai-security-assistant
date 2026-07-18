@@ -1,0 +1,21 @@
+# Base configuration for the GenAI Security Assistant knowledge base.
+# Drives the ingestion pipeline: raw -> normalized -> chunks.
+
+project:
+  name: "genai-security-assistant"
+  language: "en"
+  domain: "genai_security"
+
+paths:
+  raw_dir: "data/raw"
+  normalized_dir: "data/normalized"
+  processed_dir: "data/processed"
+  sources_manifest: "configs/sources.yaml"
+  normalized_documents: "data/normalized/documents.jsonl"
+  chunks: "data/processed/chunks.jsonl"
+
+chunking:
+  chunk_size: 700          # target characters (assignment range: 500-1000)
+  chunk_overlap: 150       # overlap characters (assignment range: 100-200)
+  min_chunk_size: 200      # merge/discard fragments smaller than this
+  strategy: "structure_aware"   # split on headings/paragraphs, snap to sentences
