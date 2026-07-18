@@ -89,3 +89,5 @@ sources:
     document_type: checklist
     risk_category: governance
     doc_version: null
+
+skip_pages: 3   # for pdf document to skip pages: cover, revision history, table of contents
