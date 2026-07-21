@@ -1,2 +1,1 @@
-def main() -> None:
-    print("Hello from genai-security-assistant!")
+"""GenAI Security Assistant: knowledge base and RAG pipeline for LLM security."""

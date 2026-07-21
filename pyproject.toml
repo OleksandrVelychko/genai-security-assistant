@@ -1,18 +1,15 @@
 [project]
 name = "genai-security-assistant"
 version = "0.1.0"
-description = "Add your description here"
+description = "Agentic RAG assistant for GenAI and LLM application security, grounded in OWASP sources"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.10"
 dependencies = [
     "beautifulsoup4>=4.15.0",
     "pdfplumber>=0.11.10",
     "pydantic>=2.13.4",
     "pyyaml>=6.0.3",
 ]
-
-[project.scripts]
-genai-security-assistant = "genai_security_assistant:main"
 
 [build-system]
 requires = ["uv_build>=0.11.19,<0.12.0"]

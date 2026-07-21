@@ -57,7 +57,7 @@ scripts/
 data/
   raw/                      # original source documents
   normalized/documents.jsonl
-  processed/chunks.jsonl    # final deliverable
+  processed/chunks.jsonl    # HW1 deliverable -> input for HW2 embeddings
 configs/
   base.yaml                 # pipeline parameters
   sources.yaml              # source manifest + controlled vocabularies
@@ -90,7 +90,7 @@ data/processed/chunks.jsonl
 
 Every line of `data/processed/chunks.jsonl` is one chunk:
 
-```json
+```text
 { "chunk_id": "...", "text": "...", "metadata": { ... } }
 ```
 
@@ -309,7 +309,7 @@ the build.
 - **Manifest-driven ingestion.** Adding a source is a YAML edit, not a code change.
 - **Typed contracts.** Controlled vocabularies are `Literal` types, so an invalid
   `risk_category` is rejected at validation time rather than silently stored.
-- **Provenance from day one.** Every chunk carries its URL, licence, version,
+- **Provenance from day one.** Every chunk carries its URL, license, version,
   retrieval timestamp and content hash.
 - **Problems were found by measurement, not by guessing.** An oversized-overlap
   bug (one chunk reached 1915 characters) and shredded code blocks were both
@@ -332,7 +332,7 @@ the build.
 - **No incremental re-ingestion yet.** `content_hash` is stored but not yet used
   to skip unchanged documents — the natural next step towards a scheduled refresh.
 - **Average chunk length (491) sits below the 700 target**, because section
-  boundaries end chunks early. This is a deliberate trade-off favouring
+  boundaries end chunks early. This is a deliberate trade-off favoring
   readability over uniform size.
 - **The table-of-contents filter is a heuristic.** It keys on dot leaders
   (a period ratio above 0.15) and would miss a contents page styled differently.
