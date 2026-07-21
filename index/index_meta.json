@@ -1,0 +1,12 @@
+{
+  "provider": "openai",
+  "model": "text-embedding-3-small",
+  "dimension": 1536,
+  "metric": "cosine",
+  "index_type": "IndexFlatIP",
+  "normalized": true,
+  "chunks_count": 264,
+  "chunks_digest": "381b785b5dff39dd4782cacc609a99570fc4f4c313e220b37acde7948a00b4b5",
+  "source_chunks_path": "data/processed/chunks.jsonl",
+  "built_at": "2026-07-21T22:23:03.800445Z"
+}
