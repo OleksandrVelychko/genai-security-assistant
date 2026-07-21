@@ -34,6 +34,7 @@ embeddings:
 #   model: "openai/text-embedding-3-small"
 #   base_url: "https://openrouter.ai/api/v1"
 #   api_key_env: "OPENROUTER_API_KEY"
+#   replace model to "text-embedding-3-large" to see fail fast principle in action
     model: "text-embedding-3-small"
     base_url: "https://api.openai.com/v1"
     api_key_env: "OPENAI_API_KEY"
