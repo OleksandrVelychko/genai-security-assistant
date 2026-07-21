@@ -1,0 +1,1 @@
+"""Semantic retrieval layer: embeddings, vector index, top-k search."""
