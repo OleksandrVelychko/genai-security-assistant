@@ -13,9 +13,38 @@ paths:
   sources_manifest: "configs/sources.yaml"
   normalized_documents: "data/normalized/documents.jsonl"
   chunks: "data/processed/chunks.jsonl"
+  # HW2
+  index_dir: "index"
+  faiss_index: "index/faiss.index"
+  index_chunks: "index/chunks.jsonl"
+  index_meta: "index/index_meta.json"
+  eval_queries: "configs/eval_queries.yaml"
+  retrieval_examples: "outputs/retrieval_examples.md"
 
 chunking:
   chunk_size: 700          # target characters (assignment range: 500-1000)
   chunk_overlap: 150       # overlap characters (assignment range: 100-200)
   min_chunk_size: 200      # merge/discard fragments smaller than this
   strategy: "structure_aware"   # split on headings/paragraphs, snap to sentences
+
+embeddings:
+  provider: "openai" # openai | sentence_transformers
+  openai:
+#  replace with this to switch to openrouter
+#   model: "openai/text-embedding-3-small"
+#   base_url: "https://openrouter.ai/api/v1"
+#   api_key_env: "OPENROUTER_API_KEY"
+    model: "text-embedding-3-small"
+    base_url: "https://api.openai.com/v1"
+    api_key_env: "OPENAI_API_KEY"
+    batch_size: 64
+  sentence_transformers:
+    model: "sentence-transformers/all-MiniLM-L6-v2"
+    batch_size: 32
+
+
+
+retrieval:
+  top_k: 5
+  score_precision: 4
+  preview_chars: 300
