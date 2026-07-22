@@ -1,0 +1,86 @@
+# Test queries for HW2 retrieval evaluation.
+# expected_docs: document_id(s) we'd expect a relevant answer to come from.
+# Used only to seed a draft relevance comment - the final judgement is manual.
+
+queries:
+  - id: q1_prevent_prompt_injection
+    query: "How can I prevent prompt injection attacks?"
+    expected_docs:
+      - owasp_llm01_prompt_injection
+      - owasp_cs_prompt_injection_prevention
+    note: "Core topic, spread across a risk page and a prevention cheat sheet."
+
+  - id: q2_excessive_agency
+    query: "What is excessive agency and what causes it?"
+    expected_docs:
+      - owasp_llm06_excessive_agency
+    note: "Definition question, concentrated in one document."
+
+  - id: q3_pii_leakage
+    query: "How do I stop an LLM from leaking personally identifiable information?"
+    expected_docs:
+      - owasp_llm02_sensitive_information_disclosure
+    note: "Should hit the PII leakage and input-validation sections."
+
+  - id: q4_indirect_injection
+    query: "What is indirect prompt injection through external content?"
+    expected_docs:
+      - owasp_llm01_prompt_injection
+      - owasp_cs_prompt_injection_prevention
+    note: "More specific than q1 - tests sub-topic discrimination."
+
+  - id: q5_agent_least_privilege
+    query: "How should I apply least privilege to AI agent tools?"
+    expected_docs:
+      - owasp_cs_ai_agent_security
+    note: "Practical question, answer lives in the agent security cheat sheet."
+
+  - id: q6_governance_checklist
+    query: "What should we check before deploying an LLM application to production?"
+    expected_docs:
+      - owasp_llm_governance_checklist
+    note: "PDF source chunked by page - expected to retrieve less cleanly."
+    comment: >
+      Relevant but noisier. Top-1, Top-3 and Top-4 come from the governance
+      checklist, but its PDF source is chunked by page ("Page 19"), so sections
+      carry no semantic heading and previews read as loose fragments. Prevention
+      cheat-sheet chunks (Top-2, Top-5) also surface, which is reasonable since
+      "what to check before deploying" overlaps with best-practice checklists.
+
+  - id: q7_output_validation
+    query: "How can I validate and constrain the output format of an LLM?"
+    expected_docs:
+      - owasp_llm01_prompt_injection
+    note: "Mitigation detail - tests retrieval of a narrow strategy."
+    comment: >
+      Partially relevant. Top-1..3 are three near-identical copies of the same
+      "Improper Output Handling" cross-reference block, duplicated across the
+      LLM01/LLM02/LLM06 pages (scores 0.5982/0.5981/0.5981). They crowd out the
+      actual answer - LLM01's "Define and validate expected output formats"
+      section never reaches the top-k. Exposes two issues: near-duplicate
+      content, and a specific mitigation losing to a more generic but
+      semantically closer block.
+
+  - id: q8_obfuscation_attacks
+    query: "What encoding and obfuscation tricks bypass prompt injection filters?"
+    expected_docs:
+      - owasp_cs_prompt_injection_prevention
+    note: "Deep sub-topic (typoglycemia, Best-of-N) - tests recall on rare terms."
+    comment: >
+      Mostly relevant, weak tail. Top-1 (Encoding/Obfuscation), Top-2
+      (Adversarial Suffix) and Top-4 (Typoglycemia) are direct hits - semantic
+      search recalled the rare "typoglycemia" term with no keyword overlap. But
+      Top-3 is the generic prompt-injection definition and Top-5 is a
+      "Reference Links" list (article titles, no real content), both pulled in
+      by topic overlap rather than meaning.
+
+  - id: q9_control_offtopic
+    query: "How do I make sourdough bread at home?"
+    expected_docs: [ ]
+    note: "Off-topic control query - establishes the irrelevant-score baseline."
+    comment: >
+      Off-topic control, not in the knowledge base. All five results score in
+      the 0.12-0.15 range, far below the 0.5+ band of on-topic queries. The
+      index still returns five chunks - it never abstains - which confirms the
+      score is the only relevance signal. Establishes the noise floor for the
+      score scale in the conclusions.

@@ -20,6 +20,7 @@ paths:
   index_meta: "index/index_meta.json"
   eval_queries: "configs/eval_queries.yaml"
   retrieval_examples: "outputs/retrieval_examples.md"
+  conclusions: "configs/conclusions.md"
 
 chunking:
   chunk_size: 700          # target characters (assignment range: 500-1000)
@@ -42,8 +43,6 @@ embeddings:
   sentence_transformers:
     model: "sentence-transformers/all-MiniLM-L6-v2"
     batch_size: 32
-
-
 
 retrieval:
   top_k: 5
