@@ -11,10 +11,10 @@ with nothing to do with the knowledge base ("how to make
 sourdough bread") was added to check how low its score goes.
 
 | Query type | Typical top-1 score |
-|---|---|
-| Direct on-topic question | 0.60 - 0.74 |
-| Partial / cross-topic     | 0.40 - 0.55 |
-| Off-topic control (bread) | 0.12 - 0.15 |
+|---|---------------------|
+| Direct on-topic question | 0.60 - 0.74         |
+| Partial / cross-topic     | 0.40 - 0.55         |
+| Off-topic control (bread) | 0.10 - 0.13         |
 
 The index always returns 5 results and never says "no match", so the score is
 the only signal of relevance. A cutoff around 0.4-0.5 would separate real
