@@ -346,6 +346,78 @@ uv run python scripts/validate_knowledge_base.py
 uv run pytest -q
 ```
 
+## HW2 - Semantic retrieval layer
+
+Turns the HW1 chunks into a searchable vector index and answers questions by
+semantic similarity:
+
+`chunks.jsonl -> embeddings -> FAISS index -> top-k semantic search`
+
+### Embedding model
+
+Configured in `configs/base.yaml` under `embeddings`. Two interchangeable
+providers behind one interface:
+
+| Provider | Model | Dim | Notes |
+|---|---|---|---|
+| `openai` (default) | `text-embedding-3-small` | 1536 | needs `OPENAI_API_KEY`; also works with OpenRouter (change `base_url`) |
+| `sentence_transformers` | `all-MiniLM-L6-v2` | 384 | local, offline; install with `uv sync --extra local-embeddings` |
+
+Chunks and queries are always encoded by the same model. The index records the
+model it was built with (`index/index_meta.json`); querying with a different
+model fails fast with a rebuild message instead of returning wrong results.
+
+### Setup
+
+    uv sync
+    cp .env.example .env      # then add your OPENAI_API_KEY
+
+### Build the index
+
+    uv run python scripts/build_index.py
+
+Writes three files to `index/`: the FAISS index, a chunk snapshot in index
+order, and a metadata sidecar.
+
+### Search
+
+    uv run python scripts/retrieval.py --query "How do I prevent prompt injection?"
+    uv run python scripts/retrieval.py -q "excessive agency" -k 3
+
+Each result shows `chunk_id`, cosine `score`, `source_file`, `document_id` and a
+text preview.
+
+### Evaluation
+
+    uv run python scripts/run_retrieval_examples.py
+
+Runs the queries in `configs/eval_queries.yaml` and regenerates
+`outputs/retrieval_examples.md`. Per-query comments live in the query file; the
+analysis lives in `configs/conclusions.md` - the report is assembled from both,
+so re-running the script reproduces it exactly.
+
+### Layout
+
+    configs/
+      eval_queries.yaml     # test queries + manual relevance comments
+      conclusions.md        # retrieval analysis (source of truth)
+    index/
+      faiss.index           # vector index
+      chunks.jsonl          # chunks in index order
+      index_meta.json       # model, dimension, digest
+    scripts/
+      build_index.py        # build the index
+      retrieval.py          # CLI semantic search
+      run_retrieval_examples.py   # regenerate the evaluation report
+    src/genai_security_assistant/retrieval/
+      embeddings.py         # pluggable embedding providers
+      vector_store.py       # FAISS wrapper (cosine search)
+      indexing.py           # chunks -> index pipeline
+      search.py             # SemanticRetriever
+    outputs/
+      retrieval_examples.md # generated report (HW2 deliverable)
+
+
 ## License and attribution
 
 Source documents are © OWASP Foundation, licensed **CC-BY-SA 4.0**. Attribution
