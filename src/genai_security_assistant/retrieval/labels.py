@@ -16,7 +16,7 @@ to explain why. validate() turns that silent drift into a loud failure.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, Field
@@ -39,7 +39,7 @@ class LabelRule(BaseModel):
     """
 
     document_id: str
-    section: Optional[str] = None
+    section: str | None = None
     grade: Grade
 
 
@@ -51,7 +51,7 @@ class SectionRef(BaseModel):
     """
 
     document_id: str
-    section: Optional[str] = None
+    section: str | None = None
     sections: list[str] = Field(default_factory=list)
 
     def pairs(self) -> list[tuple[str, str]]:
@@ -74,8 +74,8 @@ class QueryLabels(BaseModel):
     expected_docs: list[str] = Field(default_factory=list)
     relevant: list[LabelRule] = Field(default_factory=list)
     abstain: bool = False
-    note: Optional[str] = None
-    comment: Optional[str] = None
+    note: str | None = None
+    comment: str | None = None
 
 
 class LabelSet:
@@ -94,7 +94,7 @@ class LabelSet:
         self.always_irrelevant = always_irrelevant
 
     @classmethod
-    def load(cls, path: Path) -> "LabelSet":
+    def load(cls, path: Path) -> LabelSet:
         """Read the YAML file into validated objects."""
         if not path.exists():
             raise FileNotFoundError(f"{path} not found.")

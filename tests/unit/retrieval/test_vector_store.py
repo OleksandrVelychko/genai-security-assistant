@@ -44,12 +44,16 @@ def test_normalize_does_not_mutate_input():
 
 def test_build_rejects_wrong_vector_count():
     with pytest.raises(ValueError, match="does not match"):
-        FaissVectorStore.build(sample_vectors(count=5, dim=8), make_meta(count=4, dim=8))
+        FaissVectorStore.build(
+            sample_vectors(count=5, dim=8), make_meta(count=4, dim=8)
+        )
 
 
 def test_build_rejects_wrong_dimension():
     with pytest.raises(ValueError, match="dimension"):
-        FaissVectorStore.build(sample_vectors(count=5, dim=8), make_meta(count=5, dim=16))
+        FaissVectorStore.build(
+            sample_vectors(count=5, dim=8), make_meta(count=5, dim=16)
+        )
 
 
 def test_chunk_finds_itself_first():

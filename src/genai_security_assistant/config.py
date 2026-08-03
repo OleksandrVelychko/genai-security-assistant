@@ -9,7 +9,6 @@ from typing import Any
 import yaml
 from dotenv import load_dotenv
 
-
 # config.py lives at src/genai_security_assistant/config.py,
 # so the repository root is three levels up.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -24,7 +23,7 @@ def load_yaml(path: Path) -> dict[str, Any]:
         return yaml.safe_load(handle) or {}
 
 def require_env(var_name: str) -> str:
-    """Read a secret from the environment (fail fast principle if a secret is not set)"""
+    """Read a secret from the environment, failing fast when it is not set."""
     value = os.environ.get(var_name)
     if not value:
         raise RuntimeError(

@@ -29,7 +29,9 @@ def load_chunks(path: Path) -> tuple[list[Chunk], list[str]]:
             try:
                 chunks.append(Chunk.model_validate_json(line))
             except ValidationError as error:
-                errors.append(f"line {line_number}: {error.error_count()} schema error(s)")
+                errors.append(
+                    f"line {line_number}: {error.error_count()} schema error(s)"
+                )
             except json.JSONDecodeError as error:
                 errors.append(f"line {line_number}: invalid JSON ({error.msg})")
 
