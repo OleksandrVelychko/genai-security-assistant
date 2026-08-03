@@ -21,6 +21,8 @@ paths:
   eval_queries: "configs/eval_queries.yaml"
   retrieval_examples: "outputs/retrieval_examples.md"
   conclusions: "configs/conclusions.md"
+  # HW3
+  query_vectors: "index/query_vectors.npz"
 
 chunking:
   chunk_size: 700          # target characters (assignment range: 500-1000)

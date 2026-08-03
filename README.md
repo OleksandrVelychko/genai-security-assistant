@@ -418,6 +418,55 @@ so re-running the script reproduces it exactly.
       retrieval_examples.md # generated report (HW2 deliverable)
 
 
+## HW3 - Retrieval optimization
+
+In progress. This section grows with the assignment.
+
+### Why query vectors are cached
+
+The 264 chunk vectors have lived in `index/faiss.index` since HW2: built
+once, read from disk. The eleven test queries were not treated the same way
+- every run sent them to the embeddings API and used whatever came back.
+
+Two runs four minutes apart, with no file changed in between, produced
+different numbers. The API does not promise identical vectors for identical
+input, and the gap was about one part in a thousand. That sounds harmless
+until you see what it did to q7:
+
+    run A   rank 5   owasp_llm_governance_checklist / Page 19      0.5014
+    run B   rank 5   owasp_llm02 / Incorporate Differential Priv   0.5000
+
+HW3 has to show that a filtered and hybrid pipeline ranks better than the
+HW2 baseline. If the ranking also moves on its own between runs, and by
+about as much, a better score proves nothing. So query vectors are now
+fetched once into `index/query_vectors.npz`, committed, and read from disk,
+the same way chunk vectors already are.
+
+The code and the longer explanation are in
+`src/genai_security_assistant/retrieval/query_cache.py`. Three properties
+are covered by `tests/unit/retrieval/test_query_cache.py` and were also
+checked against the real pipeline:
+
+| Property | How it was checked |
+|---|---|
+| Two runs produce the same report | ran the script twice; only the `Generated:` line differed |
+| The reports need no API key | renamed `.env` away and reran; output identical |
+| Vectors from another model are refused | loading the cache under a different model name raises |
+
+Two things follow, and both matter when reading the numbers:
+
+- They describe the pipeline given one fixed set of query vectors, not an
+  average over everything the API might return. Comparing two pipelines is
+  still fair, since both read the same file, but a number quoted on its own
+  should be read with that in mind.
+- Both reports can be regenerated from a fresh clone with no API key, since
+  both sides of the retrieval are now committed.
+
+Known limitation: this fixes the measurement, not the system. A live
+service embeds each user query as it arrives, so the variation described
+here is still there in production - it has been removed from the experiment
+so that the experiment can answer one question at a time.
+
 ## License and attribution
 
 Source documents are © OWASP Foundation, licensed **CC-BY-SA 4.0**. Attribution

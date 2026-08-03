@@ -245,11 +245,26 @@ queries:
       In-domain but uncovered: LLM10 exists in the corpus only as a
       cross-reference footer. The realistic failure mode - a plausible
       question with no real answer indexed. Hardest abstain case.
+    comment: >
+      In domain, no answer indexed, and the score gives no warning. Top-1
+      reaches 0.5952 - 0.003 below q7 at 0.5982, the weakest
+      query that does have a real answer. Ranks 1-3 are one LLM09
+      cross-reference stub copied onto the LLM01, LLM02 and LLM06 pages, each
+      copy naming "Unbounded Consumption" while explaining a different risk.
+      With q9 at 0.1258 this brackets the range: an off-topic question is
+      easy to reject, a covered-domain question with nothing behind it is not.
 
   - id: q11_negative_adjacent_domain
     query: "How do I configure Kubernetes network policies?"
     expected_docs: []
     abstain: true
     note: "Security but not GenAI - tests the domain boundary, not the topic boundary."
+    comment: >
+      Adjacent domain, nothing to answer it. Top-1 scores 0.3199 and all five
+      results sit within 0.018 of each other - a flat low band with no
+      leader, unlike the clear top hit every answerable query produces. What
+      surfaces is whatever mentions configuration or policy in any sense.
+      Falls between the 0.13 of the off-topic control and the 0.60 of real
+      queries, which is where a question from a neighbouring field belongs.
 
 

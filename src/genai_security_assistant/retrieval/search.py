@@ -12,6 +12,7 @@ from genai_security_assistant.retrieval.embeddings import (
     build_embedding_provider,
 )
 from genai_security_assistant.retrieval.indexing import load_chunks
+from genai_security_assistant.retrieval.query_cache import CachedQueryEmbedder
 from genai_security_assistant.retrieval.vector_store import FaissVectorStore
 
 
@@ -34,7 +35,7 @@ class SemanticRetriever:
         self.default_top_k = default_top_k
 
     @classmethod
-    def from_settings(cls, settings: Settings | None = None) -> "SemanticRetriever":
+    def from_settings(cls, settings: Settings | None = None) -> SemanticRetriever:
         """Build a retriever from configs/base.yaml and the saved index."""
         settings = settings or Settings()
 
@@ -50,7 +51,14 @@ class SemanticRetriever:
             model=embedding_config["model"],
         )
 
-        provider = build_embedding_provider(embedding_config)
+        # Query vectors come from a committed file instead of the API, so
+        # that two runs of the same code produce the same numbers. See
+        # query_cache.py for what went wrong without it.
+        provider = CachedQueryEmbedder(
+            path=settings.path("query_vectors"),
+            model=embedding_config["model"],
+            build_provider=lambda: build_embedding_provider(embedding_config),
+        )
         chunks = load_chunks(settings.path("index_chunks"))
 
         if len(chunks) != store.meta.chunks_count:
