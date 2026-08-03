@@ -1,7 +1,58 @@
-# Test queries for HW2 retrieval evaluation.
-# expected_docs: document_id(s) we'd expect a relevant answer to come from.
-# Used only to seed a draft relevance comment - the final judgement is manual.
+# Sections that answer nothing, whatever the question was: bare lists of
+# links, and pointers to other documents. Scored 0 for every query below.
+#
+# Names are compared exactly, never as substrings. The section called
+# "2. Reference Security Misconfiguration Best Practices" contains the word
+# "Reference" but is real mitigation guidance, and a substring match would
+# throw it away.
+noise_sections:
+  - document_id: owasp_llm01_prompt_injection
+    section: "Reference Links"
+  - document_id: owasp_llm01_prompt_injection
+    section: "Related Frameworks and Taxonomies"
+  - document_id: owasp_llm02_sensitive_information_disclosure
+    section: "Reference Links"
+  - document_id: owasp_llm02_sensitive_information_disclosure
+    section: "Related Frameworks and Taxonomies"
+  - document_id: owasp_llm06_excessive_agency
+    section: "Reference Links"
+  - document_id: owasp_cs_prompt_injection_prevention
+    section: "Related Articles"
+  - document_id: owasp_cs_ai_agent_security
+    section: "References"
 
+# Every OWASP risk page ends with short stubs summarising the other risks.
+# The same five stubs sit at the bottom of the LLM01, LLM02 and LLM06 pages,
+# so the knowledge base holds 15 chunks that are identical word for word.
+# That is why three copies of one paragraph fill the top of q7 below.
+#
+# A section name on its own cannot identify them: "LLM01:2025 Prompt
+# Injection" is a stub inside the LLM02 page, but the real opening section of
+# the LLM01 page. So each stub is listed under the document it was copied into.
+cross_reference_sections:
+  - document_id: owasp_llm01_prompt_injection
+    sections: ["LLM03:2025 Supply Chain", "LLM05:2025 Improper Output Handling",
+               "LLM07:2025 System Prompt Leakage", "LLM09:2025 Misinformation"]
+  - document_id: owasp_llm02_sensitive_information_disclosure
+    sections: ["LLM01:2025 Prompt Injection", "LLM03:2025 Supply Chain",
+               "LLM05:2025 Improper Output Handling",
+               "LLM07:2025 System Prompt Leakage", "LLM09:2025 Misinformation"]
+  - document_id: owasp_llm06_excessive_agency
+    sections: ["LLM01:2025 Prompt Injection", "LLM03:2025 Supply Chain",
+               "LLM05:2025 Improper Output Handling",
+               "LLM07:2025 System Prompt Leakage", "LLM09:2025 Misinformation"]
+
+
+# Test queries, shared by HW2 and HW3 so both are judged on the same questions.
+#
+#   expected_docs - documents a good answer should come from (HW2)
+#   comment       - hand-written analysis, printed in the HW2 report as-is
+#   relevant      - how well each section answers this query (HW3):
+#                     2 = this is the answer
+#                     1 = right topic, but no actual answer
+#                     0 = not about the question
+#                   the narrowest matching entry wins; anything unlisted is 0
+#   abstain       - true when nothing in the knowledge base answers this
 queries:
   - id: q1_prevent_prompt_injection
     query: "How can I prevent prompt injection attacks?"
@@ -9,18 +60,54 @@ queries:
       - owasp_llm01_prompt_injection
       - owasp_cs_prompt_injection_prevention
     note: "Core topic, spread across a risk page and a prevention cheat sheet."
+    relevant:
+      # Whole-document default: on topic, so at least partially useful.
+      - { document_id: owasp_llm01_prompt_injection, grade: 1 }
+      - { document_id: owasp_cs_prompt_injection_prevention, grade: 1 }
+      # "Prevent" asks for countermeasures - these are the actual answer.
+      - { document_id: owasp_llm01_prompt_injection, section: "Prevention and Mitigation Strategies", grade: 2 }
+      - { document_id: owasp_llm01_prompt_injection, section: "1. Constrain model behavior", grade: 2 }
+      - { document_id: owasp_llm01_prompt_injection, section: "2. Define and validate expected output formats", grade: 2 }
+      - { document_id: owasp_llm01_prompt_injection, section: "4. Enforce privilege control and least privilege access", grade: 2 }
+      - { document_id: owasp_llm01_prompt_injection, section: "5. Require human approval for high-risk actions", grade: 2 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Input Validation and Sanitization", grade: 2 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Structured Prompts with Clear Separation", grade: 2 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Model-Based Guardrails", grade: 2 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Output Monitoring and Validation", grade: 2 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Human-in-the-Loop (HITL) Controls", grade: 2 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Remote Content Sanitization", grade: 2 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Least Privilege", grade: 2 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Best Practices Checklist", grade: 2 }
 
   - id: q2_excessive_agency
     query: "What is excessive agency and what causes it?"
-    expected_docs:
-      - owasp_llm06_excessive_agency
+    expected_docs: [owasp_llm06_excessive_agency]
     note: "Definition question, concentrated in one document."
+    relevant:
+      - { document_id: owasp_llm06_excessive_agency, grade: 1 }
+      # Definition, then the causal taxonomy - exactly what was asked.
+      - { document_id: owasp_llm06_excessive_agency, section: "LLM06:2025 Excessive Agency", grade: 2 }
+      - { document_id: owasp_llm06_excessive_agency, section: "1. Excessive Functionality", grade: 2 }
+      - { document_id: owasp_llm06_excessive_agency, section: "2. Excessive Functionality", grade: 2 }
+      - { document_id: owasp_llm06_excessive_agency, section: "4. Excessive Permissions", grade: 2 }
+      - { document_id: owasp_llm06_excessive_agency, section: "5. Excessive Permissions", grade: 2 }
+      - { document_id: owasp_llm06_excessive_agency, section: "6. Excessive Autonomy", grade: 2 }
 
   - id: q3_pii_leakage
     query: "How do I stop an LLM from leaking personally identifiable information?"
-    expected_docs:
-      - owasp_llm02_sensitive_information_disclosure
+    expected_docs: [owasp_llm02_sensitive_information_disclosure]
     note: "Should hit the PII leakage and input-validation sections."
+    relevant:
+      - { document_id: owasp_llm02_sensitive_information_disclosure, grade: 1 }
+      - { document_id: owasp_llm02_sensitive_information_disclosure, section: "1. PII Leakage", grade: 2 }
+      - { document_id: owasp_llm02_sensitive_information_disclosure, section: "2. Robust Input Validation", grade: 2 }
+      - { document_id: owasp_llm02_sensitive_information_disclosure, section: "2. Restrict Data Sources", grade: 2 }
+      - { document_id: owasp_llm02_sensitive_information_disclosure, section: "2. Incorporate Differential Privacy", grade: 2 }
+      - { document_id: owasp_llm02_sensitive_information_disclosure, section: "1. Homomorphic Encryption", grade: 2 }
+      # The agent cheat sheet answers this too, even though the question
+      # sounds like it belongs to the sensitive-information page alone.
+      - { document_id: owasp_cs_ai_agent_security, section: "Filter PII from responses", grade: 2 }
+      - { document_id: owasp_cs_ai_agent_security, section: "Data Classification and Handling", grade: 1 }
 
   - id: q4_indirect_injection
     query: "What is indirect prompt injection through external content?"
@@ -28,17 +115,35 @@ queries:
       - owasp_llm01_prompt_injection
       - owasp_cs_prompt_injection_prevention
     note: "More specific than q1 - tests sub-topic discrimination."
+    relevant:
+      - { document_id: owasp_llm01_prompt_injection, grade: 1 }
+      - { document_id: owasp_cs_prompt_injection_prevention, grade: 1 }
+      - { document_id: owasp_llm01_prompt_injection, section: "Indirect Prompt Injections", grade: 2 }
+      - { document_id: owasp_llm01_prompt_injection, section: "Scenario #2: Indirect Injection", grade: 2 }
+      - { document_id: owasp_llm01_prompt_injection, section: "Scenario #4: Intentional Model Influence", grade: 2 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "RAG Poisoning (Retrieval Attacks)", grade: 2 }
+      # Asked for the sub-type, so the generic definition is context only.
+      - { document_id: owasp_llm01_prompt_injection, section: "Direct Prompt Injections", grade: 0 }
 
   - id: q5_agent_least_privilege
     query: "How should I apply least privilege to AI agent tools?"
-    expected_docs:
-      - owasp_cs_ai_agent_security
+    expected_docs: [owasp_cs_ai_agent_security]
     note: "Practical question, answer lives in the agent security cheat sheet."
+    relevant:
+      - { document_id: owasp_cs_ai_agent_security, grade: 1 }
+      - { document_id: owasp_cs_ai_agent_security, section: "1. Tool Security & Least Privilege", grade: 2 }
+      - { document_id: owasp_cs_ai_agent_security, section: "Tool Authorization Middleware Example (Python)", grade: 2 }
+      - { document_id: owasp_cs_ai_agent_security, section: "Bad: Over-permissioned Model Context Protocol (MCP) tool configuration", grade: 2 }
+      # HW2 expected_docs was too narrow: these ARE least privilege for agent tools.
+      - { document_id: owasp_llm06_excessive_agency, section: "2. Minimize extension functionality", grade: 2 }
+      - { document_id: owasp_llm06_excessive_agency, section: "3. Avoid open-ended extensions", grade: 2 }
+      - { document_id: owasp_llm06_excessive_agency, section: "4. Minimize extension permissions", grade: 2 }
+      - { document_id: owasp_llm06_excessive_agency, section: "5. Execute extensions in user’s context", grade: 2 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Least Privilege", grade: 1 }
 
   - id: q6_governance_checklist
     query: "What should we check before deploying an LLM application to production?"
-    expected_docs:
-      - owasp_llm_governance_checklist
+    expected_docs: [owasp_llm_governance_checklist]
     note: "PDF source chunked by page - expected to retrieve less cleanly."
     comment: >
       Relevant but noisier. Top-1, Top-3 and Top-4 come from the governance
@@ -46,11 +151,28 @@ queries:
       carry no semantic heading and previews read as loose fragments. Prevention
       cheat-sheet chunks (Top-2, Top-5) also surface, which is reasonable since
       "what to check before deploying" overlaps with best-practice checklists.
+    relevant:
+      # Pages 14-19 and 21 are the checklist itself - these are the pages
+      # with lines starting with the OWASP bullet glyph (U+21E4). Pages 5-12 are
+      # background reading, 22-32 are lists of other resources and credits.
+      - { document_id: owasp_llm_governance_checklist, section: "Page 14", grade: 2 }
+      - { document_id: owasp_llm_governance_checklist, section: "Page 15", grade: 2 }
+      - { document_id: owasp_llm_governance_checklist, section: "Page 16", grade: 2 }
+      - { document_id: owasp_llm_governance_checklist, section: "Page 17", grade: 2 }
+      - { document_id: owasp_llm_governance_checklist, section: "Page 18", grade: 2 }
+      - { document_id: owasp_llm_governance_checklist, section: "Page 19", grade: 2 }
+      - { document_id: owasp_llm_governance_checklist, section: "Page 21", grade: 2 }
+      - { document_id: owasp_llm_governance_checklist, section: "Page 7",  grade: 1 }
+      - { document_id: owasp_llm_governance_checklist, section: "Page 12", grade: 1 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Best Practices Checklist", grade: 2 }
+      - { document_id: owasp_cs_ai_agent_security, section: "CI/CD and Release Gates", grade: 2 }
+      - { document_id: owasp_cs_ai_agent_security, section: "Validation Evidence", grade: 2 }
+      - { document_id: owasp_cs_ai_agent_security, section: "Abuse-Case Test Matrix", grade: 2 }
+      - { document_id: owasp_cs_ai_agent_security, section: "Do's and Don'ts", grade: 1 }
 
   - id: q7_output_validation
     query: "How can I validate and constrain the output format of an LLM?"
-    expected_docs:
-      - owasp_llm01_prompt_injection
+    expected_docs: [owasp_llm01_prompt_injection]
     note: "Mitigation detail - tests retrieval of a narrow strategy."
     comment: >
       Partially relevant. Top-1..3 are three near-identical copies of the same
@@ -60,11 +182,25 @@ queries:
       section never reaches the top-k. Exposes two issues: near-duplicate
       content, and a specific mitigation losing to a more generic but
       semantically closer block.
+    relevant:
+      # The only section in the whole knowledge base that actually answers
+      # this. Its heading repeats almost every word of the question, which
+      # semantic search alone did not take advantage of in HW2.
+      - { document_id: owasp_llm01_prompt_injection, section: "2. Define and validate expected output formats", grade: 2 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Output Monitoring and Validation", grade: 2 }
+      - { document_id: owasp_cs_ai_agent_security, section: "5. Output Validation & Guardrails", grade: 2 }
+      - { document_id: owasp_cs_ai_agent_security, section: "Output Validation Pipeline", grade: 2 }
+      # Graded 1, not 0, on purpose: the LLM05 footer is on topic but offers no
+      # method. Grading it 0 would tune the labels toward the desired outcome.
+      - { document_id: owasp_llm01_prompt_injection, section: "LLM05:2025 Improper Output Handling", grade: 1 }
+      - { document_id: owasp_llm02_sensitive_information_disclosure, section: "LLM05:2025 Improper Output Handling", grade: 1 }
+      - { document_id: owasp_llm06_excessive_agency, section: "LLM05:2025 Improper Output Handling", grade: 1 }
+      - { document_id: owasp_llm06_excessive_agency, section: "8. Sanitise LLM inputs and outputs", grade: 1 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Structured Prompts with Clear Separation", grade: 1 }
 
   - id: q8_obfuscation_attacks
     query: "What encoding and obfuscation tricks bypass prompt injection filters?"
-    expected_docs:
-      - owasp_cs_prompt_injection_prevention
+    expected_docs: [owasp_cs_prompt_injection_prevention]
     note: "Deep sub-topic (typoglycemia, Best-of-N) - tests recall on rare terms."
     comment: >
       Mostly relevant, weak tail. Top-1 (Encoding/Obfuscation), Top-2
@@ -73,14 +209,47 @@ queries:
       Top-3 is the generic prompt-injection definition and Top-5 is a
       "Reference Links" list (article titles, no real content), both pulled in
       by topic overlap rather than meaning.
+    relevant:
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Encoding and Obfuscation Techniques", grade: 2 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Typoglycemia-Based Attacks", grade: 2 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Best-of-N (BoN) Jailbreaking", grade: 2 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "HTML and Markdown Injection", grade: 1 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Jailbreaking Techniques", grade: 1 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Multi-Turn and Persistent Attacks", grade: 1 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Typoglycemia attacks", grade: 1 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Best-of-N Attack Mitigation", grade: 1 }
+      # These two fill ranks 3 and 5 of the HW2 answer to this query. Both would score 0 anyway;
+      # naming them here records exactly which chunks the improved pipeline is meant to push out.
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Introduction", grade: 0 }
+      - { document_id: owasp_cs_prompt_injection_prevention, section: "Related Articles", grade: 0 }
+
+  # --- Negative queries: measured by abstain accuracy, excluded from P@k ---
 
   - id: q9_control_offtopic
     query: "How do I make sourdough bread at home?"
-    expected_docs: [ ]
-    note: "Off-topic control query - establishes the irrelevant-score baseline."
+    expected_docs: []
+    abstain: true
+    note: "Off-topic control - establishes the irrelevant-score baseline."
     comment: >
       Off-topic control, not in the knowledge base. All five results score in
       the 0.12-0.15 range, far below the 0.5+ band of on-topic queries. The
       index still returns five chunks - it never abstains - which confirms the
       score is the only relevance signal. Establishes the noise floor for the
       score scale in the conclusions.
+
+  - id: q10_negative_uncovered_risk
+    query: "What is unbounded consumption and how do I limit LLM resource usage?"
+    expected_docs: []
+    abstain: true
+    note: >
+      In-domain but uncovered: LLM10 exists in the corpus only as a
+      cross-reference footer. The realistic failure mode - a plausible
+      question with no real answer indexed. Hardest abstain case.
+
+  - id: q11_negative_adjacent_domain
+    query: "How do I configure Kubernetes network policies?"
+    expected_docs: []
+    abstain: true
+    note: "Security but not GenAI - tests the domain boundary, not the topic boundary."
+
+
