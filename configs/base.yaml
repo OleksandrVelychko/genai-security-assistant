@@ -50,3 +50,19 @@ retrieval:
   top_k: 5
   score_precision: 4
   preview_chars: 300
+  # HW3
+  # How many candidates to fetch before filtering, as a multiple of top_k.
+  # Filtering can only remove what the search already returned, so five
+  # results need more than five candidates. The number affects work, not
+  # correctness: when too few survive, the search widens to the whole index,
+  # so a bad guess costs one extra pass and never a short answer.
+  candidate_multiplier: 4
+  # Sections that hold article titles and URLs rather than content. Matched
+  # by exact name: "2. Reference Security Misconfiguration Best Practices"
+  # contains the word Reference but is real guidance, and a substring match
+  # would throw it away.
+  reference_sections:
+    - "Reference Links"
+    - "References"
+    - "Related Articles"
+    - "Related Frameworks and Taxonomies"

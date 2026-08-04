@@ -53,12 +53,26 @@ cross_reference_sections:
 #                     0 = not about the question
 #                   the narrowest matching entry wins; anything unlisted is 0
 #   abstain       - true when nothing in the knowledge base answers this
+#   metadata_filter - narrows the search to part of the knowledge base (HW3).
+#                   Set wherever the question names a risk or a kind of
+#                   document that the knowledge base actually holds, and
+#                   left out otherwise. q7 and q10 both name one it doesn't
+#                   have, which is the same reason q10 has no answer at all.
+#                   The three abstain queries are deliberately left
+#                   unfiltered: narrowing a search for a question already
+#                   known to be unanswerable would improve the separation
+#                   margin without the pipeline doing anything.
+#                   This is a setting for the pipeline, not a judgement about
+#                   what is correct: 'relevant' and 'abstain' above stay the
+#                   ground truth, and the filter is measured against them
+#                   like any other change to the pipeline.
 queries:
   - id: q1_prevent_prompt_injection
     query: "How can I prevent prompt injection attacks?"
     expected_docs:
       - owasp_llm01_prompt_injection
       - owasp_cs_prompt_injection_prevention
+    metadata_filter: {risk_category: prompt_injection}
     note: "Core topic, spread across a risk page and a prevention cheat sheet."
     relevant:
       # Whole-document default: on topic, so at least partially useful.
@@ -82,6 +96,7 @@ queries:
   - id: q2_excessive_agency
     query: "What is excessive agency and what causes it?"
     expected_docs: [owasp_llm06_excessive_agency]
+    metadata_filter: {risk_category: excessive_agency}
     note: "Definition question, concentrated in one document."
     relevant:
       - { document_id: owasp_llm06_excessive_agency, grade: 1 }
@@ -96,6 +111,7 @@ queries:
   - id: q3_pii_leakage
     query: "How do I stop an LLM from leaking personally identifiable information?"
     expected_docs: [owasp_llm02_sensitive_information_disclosure]
+    metadata_filter: {risk_category: sensitive_information_disclosure}
     note: "Should hit the PII leakage and input-validation sections."
     relevant:
       - { document_id: owasp_llm02_sensitive_information_disclosure, grade: 1 }
@@ -114,6 +130,7 @@ queries:
     expected_docs:
       - owasp_llm01_prompt_injection
       - owasp_cs_prompt_injection_prevention
+    metadata_filter: {risk_category: prompt_injection}
     note: "More specific than q1 - tests sub-topic discrimination."
     relevant:
       - { document_id: owasp_llm01_prompt_injection, grade: 1 }
@@ -128,6 +145,7 @@ queries:
   - id: q5_agent_least_privilege
     query: "How should I apply least privilege to AI agent tools?"
     expected_docs: [owasp_cs_ai_agent_security]
+    metadata_filter: {risk_category: excessive_agency}
     note: "Practical question, answer lives in the agent security cheat sheet."
     relevant:
       - { document_id: owasp_cs_ai_agent_security, grade: 1 }
@@ -144,6 +162,7 @@ queries:
   - id: q6_governance_checklist
     query: "What should we check before deploying an LLM application to production?"
     expected_docs: [owasp_llm_governance_checklist]
+    metadata_filter: {document_type: checklist}
     note: "PDF source chunked by page - expected to retrieve less cleanly."
     comment: >
       Relevant but noisier. Top-1, Top-3 and Top-4 come from the governance
@@ -201,6 +220,7 @@ queries:
   - id: q8_obfuscation_attacks
     query: "What encoding and obfuscation tricks bypass prompt injection filters?"
     expected_docs: [owasp_cs_prompt_injection_prevention]
+    metadata_filter: {risk_category: prompt_injection}
     note: "Deep sub-topic (typoglycemia, Best-of-N) - tests recall on rare terms."
     comment: >
       Mostly relevant, weak tail. Top-1 (Encoding/Obfuscation), Top-2
@@ -261,10 +281,9 @@ queries:
     note: "Security but not GenAI - tests the domain boundary, not the topic boundary."
     comment: >
       Adjacent domain, nothing to answer it. Top-1 scores 0.3199 and all five
-      results sit within 0.018 of each other - a flat low band with no
-      leader, unlike the clear top hit every answerable query produces. What
-      surfaces is whatever mentions configuration or policy in any sense.
+      results sit within 0.018 of each other, the narrowest band of any query
+      here. That is suggestive rather than decisive: q10 spreads wider than
+      four of the answerable queries, so the shape of the scores does not
+      separate the two groups. Only the top score does, and only by 0.02.
       Falls between the 0.13 of the off-topic control and the 0.60 of real
       queries, which is where a question from a neighbouring field belongs.
-
-

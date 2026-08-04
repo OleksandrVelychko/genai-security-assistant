@@ -72,6 +72,7 @@ class QueryLabels(BaseModel):
     id: str
     query: str
     expected_docs: list[str] = Field(default_factory=list)
+    metadata_filter: dict[str, str | list[str]] | None = None
     relevant: list[LabelRule] = Field(default_factory=list)
     abstain: bool = False
     note: str | None = None
