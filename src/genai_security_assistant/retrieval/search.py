@@ -5,7 +5,11 @@ then answer queries by encoding them and mapping FAISS rows back to chunks.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import Protocol
+
 from genai_security_assistant.config import Settings
+from genai_security_assistant.models.documents import Chunk
 from genai_security_assistant.models.retrieval import RetrievedChunk
 from genai_security_assistant.retrieval.embeddings import (
     EmbeddingProvider,
@@ -14,6 +18,25 @@ from genai_security_assistant.retrieval.embeddings import (
 from genai_security_assistant.retrieval.indexing import load_chunks
 from genai_security_assistant.retrieval.query_cache import CachedQueryEmbedder
 from genai_security_assistant.retrieval.vector_store import FaissVectorStore
+
+
+class BaseRetriever(Protocol):
+    """What this file needs from the pipeline it wraps.
+    A protocol rather than SemanticRetriever itself, for the same reason
+    embeddings.py declares one: it names the three things actually used, so
+    a test can supply a stand-in without an index and an embedding model
+    behind it.
+    """
+
+    @property
+    def default_top_k(self) -> int: ...
+
+    @property
+    def chunks(self) -> Sequence[Chunk]: ...
+
+    def search(
+        self, query: str, top_k: int | None = None
+    ) -> list[RetrievedChunk]: ...
 
 
 class SemanticRetriever:

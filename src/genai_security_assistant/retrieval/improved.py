@@ -7,11 +7,9 @@ between the two columns of that table comes from this file.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
-from typing import Protocol
+from collections.abc import Mapping
 
 from genai_security_assistant.config import Settings
-from genai_security_assistant.models.documents import Chunk
 from genai_security_assistant.models.retrieval import RetrievedChunk
 from genai_security_assistant.retrieval.filters import (
     SEARCHABLE,
@@ -19,25 +17,9 @@ from genai_security_assistant.retrieval.filters import (
     SectionType,
     classify_sections,
 )
-from genai_security_assistant.retrieval.search import SemanticRetriever
-
-
-class BaseRetriever(Protocol):
-    """What this file needs from the pipeline it wraps.
-    A protocol rather than SemanticRetriever itself, for the same reason
-    embeddings.py declares one: it names the three things actually used, so
-    a test can supply a stand-in without an index and an embedding model
-    behind it.
-    """
-
-    default_top_k: int
-
-    @property
-    def chunks(self) -> Sequence[Chunk]: ...
-
-    def search(
-        self, query: str, top_k: int | None = None
-    ) -> list[RetrievedChunk]: ...
+from genai_security_assistant.retrieval.hybrid import HybridRetriever
+from genai_security_assistant.retrieval.lexical import LexicalIndex
+from genai_security_assistant.retrieval.search import BaseRetriever, SemanticRetriever
 
 
 class ImprovedRetriever:
@@ -65,9 +47,21 @@ class ImprovedRetriever:
         cls,
         settings: Settings | None = None,
         drop_boilerplate: bool = True,
+        use_hybrid: bool = False,
     ) -> ImprovedRetriever:
         settings = settings or Settings()
-        base = SemanticRetriever.from_settings(settings)
+        base: BaseRetriever = SemanticRetriever.from_settings(settings)
+        top_k = settings.retrieval.get("top_k", 5)
+        multiplier = settings.retrieval.get("candidate_multiplier", 4)
+        if use_hybrid:
+            base = HybridRetriever(
+                base=base,
+                lexical=LexicalIndex(base.chunks),
+                # Fusion reads as deep as filtering does, so both layers see
+                # the same pool of candidates.
+                depth=top_k * multiplier,
+                rrf_k=settings.retrieval["rrf_k"],
+            )
         # base.yaml is the only source for this list. A missing key has to
         # stop the run: silently switching the filter off would change every
         # figure in the report without saying so.
@@ -75,7 +69,7 @@ class ImprovedRetriever:
         return cls(
             base=base,
             section_types=classify_sections(base.chunks, reference_sections),
-            candidate_multiplier=settings.retrieval.get("candidate_multiplier", 4),
+            candidate_multiplier=multiplier,
             drop_boilerplate=drop_boilerplate,
         )
 

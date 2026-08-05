@@ -66,3 +66,9 @@ retrieval:
     - "References"
     - "Related Articles"
     - "Related Frameworks and Taxonomies"
+    # Reciprocal rank fusion adds 1/(rrf_k + position) for each ranking a
+    # chunk appears in. The constant decides how much the very top of each
+    # list outweighs the rest: smaller favors it more. 60 is the value from
+    # the paper the method comes from, kept unchanged - tuning it against
+    # eleven queries would fit noise rather than anything real.
+  rrf_k: 60

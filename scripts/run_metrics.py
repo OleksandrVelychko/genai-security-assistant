@@ -35,19 +35,22 @@ class Configuration:
     """One combination of the improvements, and the name it goes by."""
 
     name: str
+    use_hybrid: bool
     drop_boilerplate: bool
     use_metadata_filter: bool
 
 
 CONFIGURATIONS = (
-    Configuration("baseline", False, False),
-    Configuration("+ metadata filter", False, True),
-    Configuration("+ boilerplate filter", True, False),
-    Configuration("both", True, True),
+    Configuration("baseline", False, False, False),
+    Configuration("+ metadata filter", False, False, True),
+    Configuration("+ boilerplate filter", False, True, False),
+    Configuration("+ both filters", False, True, True),
+    Configuration("+ hybrid only", True, False, False),
+    Configuration("everything", True, True, True),
 )
 
 QUERY_HEADER = (
-    f"{'query':<32}{'P@1':>6}{'P@3':>6}{'P@5':>6}{'MRR':>7}{'nDCG@5':>8}{'top-1':>8}"
+    f"{'query':<32}{'P@1':>6}{'P@3':>6}{'P@5':>6}{'MRR':>7}{'nDCG@5':>8}{'best':>8}"
 )
 RUN_HEADER = (
     f"{'configuration':<24}{'P@1':>6}{'P@3':>6}{'P@5':>6}"
@@ -67,7 +70,7 @@ def query_row(score: QueryScore) -> str:
             f"{score.mrr:>7.3f}"
             f"{score.ndcg_at_5:>8.4f}"
         )
-    return f"{score.query_id:<32}{figures}{score.top_score:>8.4f}"
+    return f"{score.query_id:<32}{figures}{score.best_score:>8.4f}"
 
 
 def run_row(name: str, run: RunScore) -> str:
@@ -86,7 +89,9 @@ def measure(
 ) -> RunScore:
     """Score every query once, under one combination of the improvements."""
     retriever = ImprovedRetriever.from_settings(
-        settings, drop_boilerplate=configuration.drop_boilerplate
+        settings,
+        drop_boilerplate=configuration.drop_boilerplate,
+        use_hybrid=configuration.use_hybrid,
     )
     scores = []
     for query in labels.queries:
@@ -111,7 +116,7 @@ def main() -> None:
 
     runs = {c.name: measure(c, settings, labels, chunks) for c in CONFIGURATIONS}
 
-    for name in ("baseline", "both"):
+    for name in ("baseline", "everything"):
         print(f"\n{name}\n")
         print(QUERY_HEADER)
         print("-" * len(QUERY_HEADER))
