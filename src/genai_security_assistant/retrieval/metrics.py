@@ -108,7 +108,7 @@ class QueryScore:
 
     query_id: str
     abstain: bool
-    top_score: float
+    best_score: float
     precision_at_1: float | None = None
     precision_at_3: float | None = None
     precision_at_5: float | None = None
@@ -126,20 +126,25 @@ def score_query(
     if not results:
         raise ValueError(f"{query.id}: no results to score.")
 
-    top_score = results[0].score
+    # The best semantic match among the results actually handed over. Not
+    # the score of whatever ended up first: once a ranking is reordered by
+    # fusion, position one is no longer the closest match, and a threshold
+    # would be applied to what the caller can see, not to what stayed
+    # behind in the index.
+    best_score = max(result.score for result in results)
 
     if query.abstain:
         # Nothing in the corpus answers this, so there is no correct order
         # to compare against. The score is what can be judged: sounding
         # certain about a question you cannot answer is the failure here.
-        return QueryScore(query_id=query.id, abstain=True, top_score=top_score)
+        return QueryScore(query_id=query.id, abstain=True, best_score=best_score)
 
     grades = [labels.grade_of(result.metadata, query) for result in results]
 
     return QueryScore(
         query_id=query.id,
         abstain=False,
-        top_score=top_score,
+        best_score=best_score,
         precision_at_1=precision_at_k(grades, 1),
         precision_at_3=precision_at_k(grades, 3),
         precision_at_5=precision_at_k(grades, 5),
@@ -157,8 +162,8 @@ def separation_margin(scores: Sequence[QueryScore]) -> float:
     the two groups do not overlap. This measures the room such a threshold
     would have. Negative means the groups overlap and no threshold works.
     """
-    answerable = [score.top_score for score in scores if not score.abstain]
-    hopeless = [score.top_score for score in scores if score.abstain]
+    answerable = [score.best_score for score in scores if not score.abstain]
+    hopeless = [score.best_score for score in scores if score.abstain]
     if not answerable or not hopeless:
         raise ValueError("a margin needs queries of both kinds.")
     return min(answerable) - max(hopeless)

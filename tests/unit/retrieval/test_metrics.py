@@ -128,7 +128,7 @@ def test_an_abstain_query_is_measured_by_its_top_score_alone():
     score = score_query(query, [make_result(chunk, 1, 0.5952)], only(query), [])
 
     assert score.abstain
-    assert score.top_score == pytest.approx(0.5952)
+    assert score.best_score == pytest.approx(0.5952)
     assert score.mrr is None
     assert score.ndcg_at_5 is None
 
