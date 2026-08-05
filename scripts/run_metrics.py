@@ -2,7 +2,7 @@
 
 Run from the project root:
     uv run python scripts/run_metrics.py
-    
+
 Nothing is written to disk. This is the quick feedback loop for changing
 the pipeline; outputs/retrieval_comparison.md is the report that is kept.
 

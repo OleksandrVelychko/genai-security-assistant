@@ -37,7 +37,7 @@ class HtmlLoader(BaseLoader):
         for attribute in ("class", "id"):
             for tag in soup.find_all(attrs={attribute: _NOISE_CLASS_RE}):
                 tag.decompose()
-                
+
         root = soup.find("main") or soup.find("article") or soup.body or soup
 
         sections: list[NormalizedSection] = []

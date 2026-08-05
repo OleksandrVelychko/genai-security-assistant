@@ -61,7 +61,7 @@ def test_a_single_section_name_is_not_read_as_a_list_of_letters():
     assert classify_sections([chunk], "Reference Links") == {
         chunk.chunk_id: "body"
     }
-    
+
 def test_layout_differences_do_not_make_two_texts_different():
     """The same paragraph from a PDF and from HTML has to compare equal."""
     assert text_key("One  two\nthree") == text_key("one two three")
