@@ -7,7 +7,7 @@ which also define the shape of the final chunks in data/processed/chunks.jsonl.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -48,18 +48,18 @@ class SourceMetadata(BaseModel):
     language: str = "en"
     domain: str = "genai_security"
     document_type: DocumentType
-    risk_category: Optional[RiskCategory] = None
-    license: Optional[str] = None
-    doc_version: Optional[str] = None
-    retrieved_at: Optional[datetime] = None
-    content_hash: Optional[str] = None
+    risk_category: RiskCategory | None = None
+    license: str | None = None
+    doc_version: str | None = None
+    retrieved_at: datetime | None = None
+    content_hash: str | None = None
 
 
 class NormalizedSection(BaseModel):
     """A logical section of a normalized document, tied to a heading."""
 
     heading_path: list[str] = Field(default_factory=list)
-    section: Optional[str] = None
+    section: str | None = None
     text: str
 
 
@@ -82,17 +82,17 @@ class ChunkMetadata(BaseModel):
     source_type: SourceType
     source_url: str
     title: str
-    section: Optional[str] = None
+    section: str | None = None
     heading_path: list[str] = Field(default_factory=list)
     chunk_index: int
     language: str
     domain: str
     document_type: DocumentType
-    risk_category: Optional[RiskCategory] = None
+    risk_category: RiskCategory | None = None
     publisher: str
-    doc_version: Optional[str] = None
-    retrieved_at: Optional[datetime] = None
-    content_hash: Optional[str] = None
+    doc_version: str | None = None
+    retrieved_at: datetime | None = None
+    content_hash: str | None = None
 
 
 class Chunk(BaseModel):

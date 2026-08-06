@@ -10,9 +10,12 @@ from bs4 import BeautifulSoup
 from genai_security_assistant.ingestion.loaders.base import BaseLoader
 from genai_security_assistant.models.documents import NormalizedSection
 
-_NOISE_TAGS = ["script", "style", "nav", "header", "footer", "form", "aside", "noscript"]
+_NOISE_TAGS = [
+    "script", "style", "nav", "header",
+    "footer", "form", "aside", "noscript",
+]
 _NOISE_CLASS_RE = re.compile(
-    r"(share|social|cookie|banner|breadcrumb|related|comment|newsletter)", re.I
+    r"(share|social|cookie|banner|breadcrumb|related|comment|newsletter)", re.IGNORECASE
 )
 _HEADING_TAGS = {"h1": 1, "h2": 2, "h3": 3, "h4": 4}
 _TEXT_TAGS = ["p", "li"]
@@ -34,7 +37,7 @@ class HtmlLoader(BaseLoader):
         for attribute in ("class", "id"):
             for tag in soup.find_all(attrs={attribute: _NOISE_CLASS_RE}):
                 tag.decompose()
-                
+
         root = soup.find("main") or soup.find("article") or soup.body or soup
 
         sections: list[NormalizedSection] = []
