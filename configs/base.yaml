@@ -23,6 +23,8 @@ paths:
   conclusions: "configs/conclusions.md"
   # HW3
   query_vectors: "index/query_vectors.npz"
+  retrieval_comparison: "outputs/retrieval_comparison.md"
+  comparison_conclusions: "configs/comparison_conclusions.md"
 
 chunking:
   chunk_size: 700          # target characters (assignment range: 500-1000)
