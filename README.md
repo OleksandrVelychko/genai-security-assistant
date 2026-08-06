@@ -31,8 +31,8 @@ each chunk's metadata (`publisher`, `source_url`, `license`).
 | AI Agent Security Cheat Sheet | cheat_sheet | Markdown | excessive_agency |
 | LLM Applications Cybersecurity and Governance Checklist | checklist | PDF | governance |
 
-Sources are declared in `configs/sources.yaml`, not in code, so the pipeline does
-not depend on any particular document set.
+Sources are declared in `configs/sources.yaml`, not in code, so the pipeline doesn't 
+depend on any particular document set.
 
 ## Project structure
 
@@ -148,7 +148,7 @@ HTML source: clean extraction after page chrome was stripped
 ```json
 {
   "chunk_id": "owasp_llm01_prompt_injection_chunk_001",
-  "text": "A Prompt Injection Vulnerability occurs when user prompts alter the LLM’s behavior or output in unintended ways. These inputs can affect the model even if they are imperceptible to humans, therefore prompt injections do not need to be human-visible/readable, as long as the content is parsed by the model.",
+  "text": "A Prompt Injection Vulnerability occurs when user prompts alter the LLM’s behavior or output in unintended ways. These inputs can affect the model even if they are imperceptible to humans, therefore prompt injections don't need to be human-visible/readable, as long as the content is parsed by the model.",
   "metadata": {
     "document_id": "owasp_llm01_prompt_injection",
     "source_file": "data/raw/owasp_llm01_prompt_injection.html",
@@ -179,7 +179,7 @@ The next chunk of the same document: note the sentence-aligned overlap
 ```json
 {
   "chunk_id": "owasp_llm01_prompt_injection_chunk_002",
-  "text": "are imperceptible to humans, therefore prompt injections do not need to be human-visible/readable, as long as the content is parsed by the model.\nPrompt Injection vulnerabilities exist in how models process prompts, and how input may force the model to incorrectly pass prompt data to other parts of the model, potentially causing them to violate guidelines, generate harmful content, enable unauthorized access, or influence critical decisions. While techniques like Retrieval Augmented Generation (RAG) and fine-tuning aim to make LLM outputs more relevant and accurate, research shows that they do not fully mitigate prompt injection vulnerabilities.",
+  "text": "are imperceptible to humans, therefore prompt injections don't need to be human-visible/readable, as long as the content is parsed by the model.\nPrompt Injection vulnerabilities exist in how models process prompts, and how input may force the model to incorrectly pass prompt data to other parts of the model, potentially causing them to violate guidelines, generate harmful content, enable unauthorized access, or influence critical decisions. While techniques like Retrieval Augmented Generation (RAG) and fine-tuning aim to make LLM outputs more relevant and accurate, research shows that they don't fully mitigate prompt injection vulnerabilities.",
   "metadata": {
     "document_id": "owasp_llm01_prompt_injection",
     "source_file": "data/raw/owasp_llm01_prompt_injection.html",
@@ -299,7 +299,7 @@ RESULT: PASS
 
 Blocking failures (malformed JSON, duplicate ids, empty text) make the script
 exit non-zero so it can be used as a CI gate. Soft quality signals (a chunk
-slightly below the minimum, suspicious glyphs) are reported but do not fail
+slightly below the minimum, suspicious glyphs) are reported but don't fail
 the build.
 
 ## What worked well
@@ -420,16 +420,89 @@ so re-running the script reproduces it exactly.
 
 ## HW3 - Retrieval optimization
 
-In progress. This section grows with the assignment.
+Takes the HW2 search and tries to make it return better chunks, then measures
+whether it did:
+
+`query -> dense + BM25 -> fuse by rank -> drop what can't answer -> top-k`
+
+### What was added
+
+**Deduplication.** Five paragraphs in this corpus are copied word for word
+onto three OWASP pages each, so fifteen chunks are repeats. They read like
+clean definitions and score well, which is how three copies of one footer
+came to fill the top three results of a query whose real answer never
+appeared at all. Any text repeated across documents is dropped, along with
+sections that hold only links. `retrieval/filters.py`.
+
+**Metadata filtering.** Where a question names a risk or a kind of document,
+the search is restricted to that part of the corpus. The filters are written
+per query in `configs/eval_queries.yaml` and can be any field of
+`ChunkMetadata`. `MetadataFilter` in `retrieval/filters.py`.
+
+**Hybrid search.** BM25 runs over the same chunks and the two rankings are
+merged by reciprocal rank fusion. Keyword matching finds sections whose
+wording repeats the question even when their meaning didn't rank highly.
+`retrieval/lexical.py` and `retrieval/hybrid.py`.
+
+Each can be switched on alone, which is what makes it possible to say which
+one did what. `SemanticRetriever` is untouched, so the baseline in the report
+is the HW2 pipeline itself rather than a special case of the new code.
+
+### How to run it
+
+Search one query, with as much or as little of HW3 as you like:
+
+    uv run python scripts/retrieval_improved.py -q "How do I validate LLM output?"
+    uv run python scripts/retrieval_improved.py -q "..." --mode baseline
+    uv run python scripts/retrieval_improved.py -q "..." -f document_type=checklist
+
+Regenerate the comparison report:
+
+    uv run python scripts/run_retrieval_comparison.py
+
+Print the same figures without writing a file, which is the quick loop while
+changing the pipeline:
+
+    uv run python scripts/run_metrics.py
+
+Check that every relevance label still points at a section that exists:
+
+    uv run python scripts/check_labels.py
+
+**No API key is needed for any of these.** The chunk vectors are committed in
+`index/faiss.index` and the eleven query vectors in `index/query_vectors.npz`,
+so a fresh clone reproduces every figure offline. A question that is not one
+of the eleven has no cached vector and does need `OPENAI_API_KEY`.
+
+### Results
+
+| Configuration | P@1 | P@5 | MRR | nDCG@5 | Separation margin |
+|---|---|---|---|---|---|
+| baseline (HW2) | 0.62 | 0.30 | 0.698 | 0.4843 | +0.0030 |
+| both filters | 0.62 | 0.33 | 0.754 | 0.5055 | +0.0231 |
+| all three | 0.50 | 0.38 | 0.677 | 0.5531 | +0.0083 |
+
+Full table with every configuration, per-query movement and the analysis:
+`outputs/retrieval_comparison.md`.
+
+There is no single winner. The metadata filter improves the order, deduplication
+improves how far apart answerable and unanswerable questions score, and hybrid
+search fills the top five at the cost of the first position. The report argues
+for shipping all three and says plainly what that costs.
+
+Measurement rests on three things added for the purpose: relevance labels in
+`configs/eval_queries.yaml`, committed before any figure was produced so they
+couldn't be tuned to fit one; the metrics in `retrieval/metrics.py`; and the
+frozen query vectors described below.
 
 ### Why query vectors are cached
 
 The 264 chunk vectors have lived in `index/faiss.index` since HW2: built
-once, read from disk. The eleven test queries were not treated the same way
+once, read from disk. The eleven test queries weren't treated the same way
 - every run sent them to the embeddings API and used whatever came back.
 
 Two runs four minutes apart, with no file changed in between, produced
-different numbers. The API does not promise identical vectors for identical
+different numbers. The API doesn't promise identical vectors for identical
 input, and the gap was about one part in a thousand. That sounds harmless
 until you see what it did to q7:
 
@@ -466,6 +539,44 @@ Known limitation: this fixes the measurement, not the system. A live
 service embeds each user query as it arrives, so the variation described
 here is still there in production - it has been removed from the experiment
 so that the experiment can answer one question at a time.
+
+### Known limitations
+
+- **Only retrieval was measured.** Whether an assistant writes a correct,
+  grounded answer from these chunks is untested.
+- **Eleven queries, three of them unanswerable.** Enough to see an effect,
+  too few to choose a production threshold.
+- **The metadata filters are supplied by hand**, not derived from the question
+  by the pipeline. The figures show what a correct constraint is worth, not
+  how well scope extraction would work.
+- **Nothing refuses to answer.** The `abstain` flag is read by the metric and
+  by nothing else.
+- **PDF extraction is still by page**, so the governance checklist has sections
+  called "Page 19". Fixing it changes the chunks, which would have made this
+  comparison measure two things at once.
+
+### Layout
+
+    configs/
+      comparison_conclusions.md   # HW3 analysis (source of truth)
+      eval_queries.yaml           # queries + relevance labels + per-query filters
+    index/
+      query_vectors.npz           # frozen query vectors
+    scripts/
+      retrieval_improved.py       # CLI: filtered and hybrid search
+      run_retrieval_comparison.py # regenerate the comparison report
+      run_metrics.py              # every configuration, printed
+      check_labels.py             # validate the labels against the chunks
+    src/genai_security_assistant/retrieval/
+      filters.py                  # duplicate detection + metadata filter
+      lexical.py                  # BM25 over the same chunks
+      hybrid.py                   # reciprocal rank fusion
+      improved.py                 # the pipeline, one switch per change
+      labels.py                   # relevance labels
+      metrics.py                  # P@k, MRR, nDCG, separation margin
+      query_cache.py              # frozen query vectors
+    outputs/
+      retrieval_comparison.md     # generated report (HW3 deliverable)
 
 ## License and attribution
 
