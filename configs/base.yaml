@@ -69,6 +69,18 @@ generation:
   # Read answers from index/answers_cache.json when they are there.
   # scripts/rag_answer.py --live overrides this for one run.
   use_cached_answers: true
+  # Fallback, first layer: below this score the LLM is not called at all.
+  # Taken from the HW3 numbers. 0.3199 is the loudest question with no
+  # answer (q11), 0.5982 the quietest with one (q7). Anything between the
+  # two separates them, and 0.45 sits clear of both.
+  #
+  # This doesn't catch q10, which scores 0.5952 with nothing behind it.
+  # 0.003 from q7, so no threshold can. The prompt rule is
+  # what has to catch that one.
+  #
+  # Fitted to eleven questions. It shows how the layer works; it's not a
+  # calibrated number.
+  min_score: 0.45
 
 retrieval:
   top_k: 5
