@@ -1,0 +1,20 @@
+{
+  "938e5d264aed24ca82fe625570a2ba6fe7af532dacd92f4b53f63b4bc68fdd15": {
+    "answer": "Prompt injection attacks can be mitigated by building safeguards into system prompts and input handling to prevent malicious inputs from altering the model's behavior unexpectedly. Although fool-proof prevention methods are unclear due to the stochastic nature of generative AI, ongoing updates to the model’s training and safety mechanisms are essential, especially to prevent jailbreaking, a severe form of prompt injection. Developers should also consider measures that reduce the impact of prompt injections, such as isolating user inputs from system instructions and carefully managing how prompts are constructed and processed. These strategies help limit bypassing of safety controls, unauthorized data access, and other risks associated with prompt injection vulnerabilities [owasp_llm01_prompt_injection_chunk_003][owasp_llm01_prompt_injection_chunk_008][owasp_cs_prompt_injection_prevention_chunk_001].",
+    "created_at": "2026-08-07 23:11:46Z",
+    "model": "gpt-4.1-mini",
+    "question_hint": "How can I prevent prompt injection attacks?\n\nAnswer:"
+  },
+  "a1af6dc0abb67cd161fb117e94bc65f9298d8b186f3f3e9f5c6a72f467d1d8f1": {
+    "answer": "To validate and constrain the output format of an LLM, you should specify clear output formats and request detailed reasoning and source citations. Use deterministic code to check that the output adheres to these formats. Additionally, define sensitive categories and create rules to identify and handle such content, applying semantic filters and string-checking to scan for disallowed content. Evaluating responses using the RAG Triad—assessing context relevance, groundedness, and question/answer relevance—can help identify potentially malicious outputs. Monitoring outputs for suspicious patterns and filtering responses that violate validation rules or exceed length limits is also recommended [owasp_llm01_prompt_injection_chunk_010][owasp_cs_prompt_injection_prevention_chunk_024].",
+    "created_at": "2026-08-07 23:19:54Z",
+    "model": "gpt-4.1-mini",
+    "question_hint": "How can I validate and constrain the output format of an LLM?\n\nAnswer:"
+  },
+  "c5291a8486b3d988eed5d00574d0ee3a66e84036c71be22782b9ef752f1803c2": {
+    "answer": "I do not have enough information in the indexed OWASP documents to answer this question.",
+    "created_at": "2026-08-07 23:13:54Z",
+    "model": "gpt-4.1-mini",
+    "question_hint": "What is unbounded consumption and how do I limit LLM resource usage?\n\nAnswer:"
+  }
+}

@@ -70,15 +70,24 @@ generation:
   # scripts/rag_answer.py --live overrides this for one run.
   use_cached_answers: true
   # Fallback, first layer: below this score the LLM is not called at all.
-  # Taken from the HW3 numbers. 0.3199 is the loudest question with no
-  # answer (q11), 0.5982 the quietest with one (q7). Anything between the
-  # two separates them, and 0.45 sits clear of both.
   #
-  # This doesn't catch q10, which scores 0.5952 with nothing behind it.
-  # 0.003 from q7, so no threshold can. The prompt rule is
-  # what has to catch that one.
+  # Measured in the configuration this pipeline runs, not the HW2
+  # baseline. The four questions that fix the range:
   #
-  # Fitted to eleven questions. It shows how the layer works; it's not a
+  #   0.1258  sourdough bread     - off-topic, no answer
+  #   0.3199  Kubernetes policies - security, but not this corpus
+  #   0.4899  unbounded consumption - in domain, still no answer
+  #   0.4982  output validation   - the weakest question that does have one
+  #
+  # 0.45 sits above the second and below the third, so it stops the two
+  # obvious ones and lets everything else through.
+  #
+  # It can't stop the third. Only 0.0083 separates 0.4899 from 0.4982,
+  # which is the separation margin reported for this configuration in
+  # outputs/retrieval_comparison.md. No threshold fits in that gap. The
+  # refusal rule in the prompt is what catches that question.
+  #
+  # Fitted to 11 questions. It shows how the layer works; it's not a
   # calibrated number.
   min_score: 0.45
 
