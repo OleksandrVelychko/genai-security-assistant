@@ -147,3 +147,20 @@ def get_prompt(version: str) -> PromptTemplate:
             f"Unknown prompt version {version!r}. Available: {sorted(PROMPTS)}"
         )
     return PROMPTS[version]
+
+def normalize(text: str) -> str:
+    """Collapse all whitespace, so line breaks do not hide a match."""
+    return " ".join(text.split()).lower()
+
+
+def is_refusal(answer_text: str) -> bool:
+    """Did the model use the refusal sentence?
+    Substring, not equality. The model sometimes wraps the sentence in
+    quotes or adds a full stop, and that is still a refusal. Whitespace is
+    collapsed first, because a wrapped line would otherwise not match.
+
+    Lives next to FALLBACK_SENTENCE on purpose: reword one and the other
+    is right there.
+    """
+    return normalize(FALLBACK_SENTENCE) in normalize(answer_text)
+
