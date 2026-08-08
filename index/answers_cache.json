@@ -1,4 +1,10 @@
 {
+  "3b66385fc5922aa79a3d045c9b151f16fc43f4afaf46abdf497f957904427896": {
+    "answer": "Excessive Agency is a vulnerability in LLM-based systems where the system is granted too much ability to perform actions, such as calling functions or interfacing with other systems via extensions, which can lead to damaging actions in response to unexpected, ambiguous, or manipulated LLM outputs. It typically arises from excessive functionality, excessive permissions, or excessive autonomy granted to the LLM agent. Common causes include hallucination or confabulation from poorly engineered prompts or a poorly performing model, as well as direct or indirect prompt injection from malicious users, compromised extensions, or malicious peer agents in multi-agent systems [owasp_llm06_excessive_agency_chunk_001][owasp_llm06_excessive_agency_chunk_002][owasp_llm06_excessive_agency_chunk_003].",
+    "created_at": "2026-08-08 12:36:22Z",
+    "model": "gpt-4.1-mini",
+    "question_hint": "What is excessive agency and what causes it?\n\nAnswer:"
+  },
   "938e5d264aed24ca82fe625570a2ba6fe7af532dacd92f4b53f63b4bc68fdd15": {
     "answer": "Prompt injection attacks can be mitigated by building safeguards into system prompts and input handling to prevent malicious inputs from altering the model's behavior unexpectedly. Although fool-proof prevention methods are unclear due to the stochastic nature of generative AI, ongoing updates to the model’s training and safety mechanisms are essential, especially to prevent jailbreaking, a severe form of prompt injection. Developers should also consider measures that reduce the impact of prompt injections, such as isolating user inputs from system instructions and carefully managing how prompts are constructed and processed. These strategies help limit bypassing of safety controls, unauthorized data access, and other risks associated with prompt injection vulnerabilities [owasp_llm01_prompt_injection_chunk_003][owasp_llm01_prompt_injection_chunk_008][owasp_cs_prompt_injection_prevention_chunk_001].",
     "created_at": "2026-08-07 23:11:46Z",
