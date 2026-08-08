@@ -56,7 +56,11 @@ def render_summary(rows: list[tuple[dict, GroundedAnswer]]) -> list[str]:
     return lines
 
 
-def render_question(item: dict, answer: GroundedAnswer) -> list[str]:
+def render_question(
+    item: dict,
+    answer: GroundedAnswer,
+    show_comment: bool,
+) -> list[str]:
     """One question, in the shape the assignment asks for."""
     cited_ids = {citation.chunk_id for citation in answer.citations}
 
@@ -93,11 +97,16 @@ def render_question(item: dict, answer: GroundedAnswer) -> list[str]:
         if bare:
             lines.append(f"**Named without brackets:** {', '.join(bare)}\n")
 
-    comment = (item.get("comment") or item.get("note") or "").strip()
-    lines.append(f"**Comment:** {comment}\n")
+    # The comments in qa_questions.yaml describe the v3 run. Printing them
+    # under a v1 answer would put analysis of one run beside the output of
+    # another. The a priori note is safe in any version.
+    if show_comment:
+        text = (item.get("comment") or item.get("note") or "").strip()
+        lines.append(f"**Comment:** {text}\n")
+    else:
+        lines.append(f"**Note:** {(item.get('note') or '').strip()}\n")
     lines.append("---\n")
     return lines
-
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Write the HW4 answers report.")
@@ -145,9 +154,11 @@ def main() -> None:
     lines.extend(render_summary(rows))
     lines.append("\n---\n")
 
-    for item, answer in rows:
-        lines.extend(render_question(item, answer))
+    default_version = settings.generation.get("prompt_version", "v3")
+    show_comments = answerer.prompt.version == default_version
 
+    for item, answer in rows:
+        lines.extend(render_question(item, answer, show_comments))
     conclusions = settings.path("answer_conclusions")
     if conclusions.exists():
         lines.append(conclusions.read_text(encoding="utf-8").strip())

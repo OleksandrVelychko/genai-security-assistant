@@ -31,6 +31,7 @@ paths:
   rag_answers_examples: "outputs/rag_answers_examples.md"
   prompt_improvements: "outputs/rag_prompt_improvements.md"
   answer_conclusions: "configs/answer_conclusions.md"
+  prompt_conclusions: "configs/prompt_conclusions.md"
 
 chunking:
   chunk_size: 700          # target characters (assignment range: 500-1000)
