@@ -71,25 +71,29 @@ generation:
   use_cached_answers: true
   # Fallback, first layer: below this score the LLM is not called at all.
   #
-  # Measured in the configuration this pipeline runs, not the HW2
-  # baseline. The four questions that fix the range:
+  # Measured in the configuration this pipeline runs, over the eight
+  # questions in configs/qa_questions.yaml:
   #
-  #   0.1258  sourdough bread     - off-topic, no answer
-  #   0.3199  Kubernetes policies - security, but not this corpus
-  #   0.4899  unbounded consumption - in domain, still no answer
-  #   0.4982  output validation   - the weakest question that does have one
+  #   0.1258  sourdough bread          - off-topic, no answer
+  #   0.3199  Kubernetes policies      - security, not this corpus
+  #   0.4799  prompt injection, reworded - has an answer
+  #   0.4899  unbounded consumption    - in domain, no answer
+  #   0.4982  output validation        - has an answer
+  #   0.7003  prompt injection, as written in HW2
   #
-  # 0.45 sits above the second and below the third, so it stops the two
-  # obvious ones and lets everything else through.
+  # Read the middle of that list. A question with an answer scores 0.4799
+  # and one without scores 0.4899, so the two groups overlap and no
+  # threshold tells them apart. The gate is only good for the far end,
+  # where a question is plainly not about this corpus.
   #
-  # It can't stop the third. Only 0.0083 separates 0.4899 from 0.4982,
-  # which is the separation margin reported for this configuration in
-  # outputs/retrieval_comparison.md. No threshold fits in that gap. The
-  # refusal rule in the prompt is what catches that question.
+  # 0.40 sits halfway between 0.3199 and 0.4799, the two neighbors it has
+  # to separate. 0.45 also works on these eight questions and every
+  # decision below is the same either way; 0.40 just leaves more room
+  # before a reworded question gets stopped by mistake.
   #
-  # Fitted to 11 questions. It shows how the layer works; it's not a
-  # calibrated number.
-  min_score: 0.45
+  # What the gate can't do, the refusal rule in the prompt does, and
+  # outputs/rag_answers_examples.md shows it doing so on two questions.
+  min_score: 0.40
 
 retrieval:
   top_k: 5

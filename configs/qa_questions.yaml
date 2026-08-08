@@ -1,0 +1,108 @@
+# Test questions for HW4.
+#
+# 6 of the 8 are the HW2/HW3 queries word for word, so their vectors
+# are already in index/query_vectors.npz, and they need no API key.
+# Two are new: the reworded pair.
+#
+# No metadata filters here. HW3 wrote one by hand for each query, which
+# measured what a correct filter is worth to retrieval. A person asking a
+# question doesn't bring a filter, so this file leaves them out
+# and the pipeline works with what it can derive on its own.
+#
+# Fields
+#   id       - stable name, used in the report
+#   query    - what gets asked
+#   kind     - which requirement from the assignment it covers
+#   expect   - answered or abstained, written before the run
+#   based_on - the HW2/HW3 query it reuses, if any
+#   note     - why the question is in the set, written before the run
+#   comment  - what actually happened, written by hand after the run and
+#              printed in the report as it stands
+
+questions:
+  # --- answer is in the corpus ------------------------------------------
+  - id: hw4_q1_prevent_prompt_injection
+    query: "How can I prevent prompt injection attacks?"
+    kind: direct
+    expect: answered
+    based_on: q1_prevent_prompt_injection
+    note: >
+      The easy case. The answer is spread over a risk page and a
+      prevention cheat sheet, and HW2 already retrieved it well.
+
+  - id: hw4_q2_excessive_agency
+    query: "What is excessive agency and what causes it?"
+    kind: direct
+    expect: answered
+    based_on: q2_excessive_agency
+    note: >
+      A definition question, answered inside one document. Tests whether
+      the model summarises rather than copies a whole chunk back.
+
+  # --- the same two questions, reworded ---------------------------------
+  - id: hw4_q3_injection_reworded
+    query: >-
+      What can I do to stop someone from hijacking my model with
+      crafted input?
+    kind: reworded
+    expect: answered
+    based_on: q1_prevent_prompt_injection
+    note: >
+      hw4_q1 without the words "prompt injection". BM25 has nothing to
+      match on, so retrieval falls back to meaning alone. If this returns
+      the same documents as hw4_q1, the embeddings are doing their job.
+
+  - id: hw4_q4_agency_reworded
+    query: >-
+      Why is it dangerous to give an AI agent broad permissions and
+      many tools?
+    kind: reworded
+    expect: answered
+    based_on: q2_excessive_agency
+    note: >
+      hw4_q2 without the words "excessive agency". Harder than the
+      previous one: the corpus names this risk with a term the question
+      avoids entirely.
+
+  # --- retrieval is thin ------------------------------------------------
+  - id: hw4_q5_output_validation
+    query: "How can I validate and constrain the output format of an LLM?"
+    kind: weak_context
+    expect: answered
+    based_on: q7_output_validation
+    note: >
+      The weakest question the corpus can answer: 0.4982, and only one
+      section really answers it. In HW2 that section never reached the
+      top five at all; BM25 pulled it in during HW3. This is where a
+      thin context meets a model that must not fill the gaps itself.
+
+  # --- nothing to answer with -------------------------------------------
+  - id: hw4_q6_offtopic_sourdough
+    query: "How do I make sourdough bread at home?"
+    kind: no_answer
+    expect: abstained
+    based_on: q9_control_offtopic
+    note: >
+      Off topic by a wide margin, 0.1258. The score gate should stop this
+      before the model is called at all.
+
+  - id: hw4_q7_uncovered_risk
+    query: "What is unbounded consumption and how do I limit LLM resource usage?"
+    kind: no_answer
+    expect: abstained
+    based_on: q10_negative_uncovered_risk
+    note: >
+      The hard one. In domain, and nothing behind it: LLM10 appears in
+      this corpus only as a footer on other pages. Scores 0.4899, which
+      is 0.0083 below the weakest answerable question, so no threshold
+      can separate them. Only the refusal rule in the prompt can.
+
+  - id: hw4_q8_adjacent_domain
+    query: "How do I configure Kubernetes network policies?"
+    kind: no_answer
+    expect: abstained
+    based_on: q11_negative_adjacent_domain
+    note: >
+      Security, but not this corpus. At 0.3199 it sits between the
+      off-topic control and the questions that do have answers, which is
+      where a neighbouring field belongs.
