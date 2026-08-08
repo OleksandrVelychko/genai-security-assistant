@@ -13,16 +13,26 @@ from collections.abc import Sequence
 from genai_security_assistant.models.generation import Citation
 from genai_security_assistant.models.retrieval import RetrievedChunk
 
-# Anything in square brackets with no spaces in it. Deliberately loose:
-# if the model writes [1] or [Prevention], that is a citation a reader
-# can't check either, so it belongs in the unsupported list rather than
-# being quietly ignored.
-CITATION_PATTERN = re.compile(r"\[([^\[\]\s]+)\]")
+# Anything in square brackets. The model sometimes puts two ids in one
+# pair, separated by a comma, and the earlier pattern required no spaces
+# inside the brackets, so that whole citation vanished without a trace.
+CITATION_PATTERN = re.compile(r"\[([^\[\]]+)\]")
 
 
 def extract_citation_ids(answer_text: str) -> list[str]:
-    """Every bracketed id, in the order it appears, without repeats."""
-    return list(dict.fromkeys(CITATION_PATTERN.findall(answer_text)))
+    """Every bracketed id, in the order it appears, without repeats.
+    A bracket may hold several ids separated by commas. Parts containing
+    a space are dropped: those are prose in brackets, not an attempt at a
+    citation. A single odd word like [1] is kept, because a reader can't
+    check that one either,and it belongs in the unsupported list.
+    """
+    ids: list[str] = []
+    for group in CITATION_PATTERN.findall(answer_text):
+        for part in group.split(","):
+            part = part.strip()
+            if part and " " not in part:
+                ids.append(part)
+    return list(dict.fromkeys(ids))
 
 
 def split_citations(

@@ -92,3 +92,14 @@ def test_an_id_named_without_brackets_is_reported_separately():
 def test_a_bracketed_id_is_not_also_a_bare_mention():
     retrieved = [make_result("chunk_a")]
     assert bare_mentions("See [chunk_a].", retrieved) == []
+
+
+def test_two_ids_in_one_bracket_are_both_found():
+    """The model writes [a, b] often enough that dropping it loses real
+    citations, and the earlier pattern dropped it in silence."""
+    assert extract_citation_ids("Both [chunk_a, chunk_b].") == ["chunk_a", "chunk_b"]
+
+
+def test_a_bracketed_phrase_is_not_a_citation():
+    """Prose in brackets is prose. Only a single word can be an id."""
+    assert extract_citation_ids("As shown [see the next section].") == []
