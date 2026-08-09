@@ -9,7 +9,6 @@ from typing import Any
 import yaml
 from dotenv import load_dotenv
 
-
 # config.py lives at src/genai_security_assistant/config.py,
 # so the repository root is three levels up.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -24,7 +23,7 @@ def load_yaml(path: Path) -> dict[str, Any]:
         return yaml.safe_load(handle) or {}
 
 def require_env(var_name: str) -> str:
-    """Read a secret from the environment (fail fast principle if a secret is not set)"""
+    """Read a secret from the environment, failing fast when it is not set."""
     value = os.environ.get(var_name)
     if not value:
         raise RuntimeError(
@@ -44,6 +43,7 @@ class Settings:
         self.chunking: dict[str, Any] = raw.get("chunking", {})
         self.embeddings: dict[str, Any] = raw.get("embeddings", {})
         self.retrieval: dict[str, Any] = raw.get("retrieval", {})
+        self.generation: dict[str, Any] = raw.get("generation", {})
 
     def path(self, key: str) -> Path:
         """Resolve a configured relative path against the project root."""
@@ -56,6 +56,18 @@ class Settings:
         provider = self.embeddings.get("provider", "openai")
         block = dict(self.embeddings.get(provider, {}))
         block["provider"] = provider
+        return block
+
+    def generation_config(self) -> dict[str, Any]:
+        """Return the active chat provider's config, with its name folded in.
+        Same shape as embedding_config(): one place decides which provider
+        is in use, everything else reads a flat dict.
+        """
+        provider = self.generation.get("provider", "openai")
+        block = dict(self.generation.get(provider, {}))
+        block["provider"] = provider
+        block["temperature"] = self.generation.get("temperature", 0)
+        block["max_output_tokens"] = self.generation.get("max_output_tokens", 600)
         return block
 
 
