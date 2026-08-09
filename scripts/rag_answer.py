@@ -14,7 +14,7 @@ to try search settings.
 Answers and the API key
 -----------------------
 Answers already in index/answers_cache.json are replayed from disk, so
-the eight questions in configs/qa_questions.yaml run with no network and
+the nine questions in configs/qa_questions.yaml run with no network and
 no key. Any other question calls the API and needs OPENAI_API_KEY in
 .env, and its answer is written into the cache. That means the file turns
 up as modified in git. Throw those away with

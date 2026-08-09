@@ -255,8 +255,10 @@ v3 instead, which is why it found something.
 The refusal sentence is fixed word for word. v2 already had one and v3
 keeps the same text. It matters for the code rather than the answer:
 `is_refusal()` in `generation/prompts.py` compares strings, so the pipeline
-can tell a refusal from an answer without a second model call. Asking the
-model to say it does not know in its own words would need one.
+can tell a refusal from an answer with no extra work. Letting the model
+word its refusal freely would need something else in its place - a
+structured field in the same response, a sentinel token, or a second call.
+A fixed sentence is the cheapest of those and the easiest to test.
 
 The length limit, three to six sentences, exists because v1 answered
 `hw4_q1` with six numbered sections and `hw4_q7` with four. Nothing

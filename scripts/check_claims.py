@@ -172,6 +172,13 @@ def chunks_containing(text: str) -> list[str]:
     return sorted(row["chunk_id"] for row in indexed_chunks() if text in row["text"])
 
 
+def grade_two_sections(query_id: str) -> int:
+    """Sections labelled as the actual answer for one HW3 eval query."""
+    text = read("configs/eval_queries.yaml")
+    block = text.split(f"id: {query_id}")[1].split("- id: ")[0]
+    return block.count("grade: 2")
+
+
 def claims() -> list[tuple[str, object, object]]:
     """Each entry is what the files say and what the conclusions say.
 
@@ -249,6 +256,10 @@ def claims() -> list[tuple[str, object, object]]:
          top_chunk_was_cited("v3", "hw4_q4_agency_reworded"), False),
         ("hw4_q5 does not cite its highest-scoring chunk",
          top_chunk_was_cited("v3", "hw4_q5_output_validation"), False),
+        ("sections labelled grade 2 for the output-validation query",
+         grade_two_sections("q7_output_validation"), 4),
+        ("hw4_q5 cites two of them",
+         rows("v3")["hw4_q5_output_validation"]["cited"], 2),
 
         # --- the corpus itself ---
         ("chunks in the index", len(indexed_chunks()), 264),

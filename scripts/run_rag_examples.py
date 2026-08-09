@@ -7,7 +7,7 @@ Run from the project root:
 Answers come from index/answers_cache.json, so this rebuilds the report
 with no network and no key. --live forces fresh calls instead.
 
---prompt writes the same eight questions through an older prompt. That is
+--prompt writes the same nine questions through an older prompt. That is
 how the before/after examples in outputs/rag_prompt_improvements.md were
 produced.
 """

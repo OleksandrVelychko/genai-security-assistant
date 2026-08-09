@@ -101,23 +101,28 @@ questions:
     expect: answered
     based_on: q7_output_validation
     note: >
-      The weakest question the corpus can answer: 0.4982, and only one
-      section really answers it. In HW2 that section never reached the
-      top five at all; BM25 pulled it in during HW3. This is where a
-      thin context meets a model that must not fill the gaps itself.
+      The weakest question the corpus can answer: 0.4982. Four sections are
+      labelled grade 2 for it in eval_queries.yaml, and the closest match -
+      "2. Define and validate expected output formats" - never reached the
+      top five in HW2 at all. This is where a thin context meets a model
+      that must not fill the gaps itself.
     comment: >
       The thin-context case behaved as intended. Top-1 by score, the
       governance checklist page 19 at 0.4982, is not cited: the answer is
-      built from ranks 3 and 5. The chunk carrying it, "2. Define and
-      validate expected output formats", is the one HW3 labelled as the
-      only real answer in this corpus, and the one HW2 retrieval never
-      returned in the top five at all. So this answer exists because of
-      the BM25 half added in HW3.
+      built from ranks 3 and 5. Those two are "2. Define and validate
+      expected output formats" and "Output Monitoring and Validation",
+      both labelled grade 2 in eval_queries.yaml.
 
-      The note above calls this the weakest question the corpus can
-      answer, which was true of the HW3 set. hw4_q3 was added at the same
-      time and scores 0.4799, lower still, so that claim did not survive
-      its own question set.
+      Both HW3 changes are behind this answer. In the HW2 baseline no
+      grade-2 chunk reached the top five for this query: three copies of
+      one cross-reference footer filled the first three places.
+      Deduplication removed the copies, which is when a correct chunk first
+      appeared, and BM25 brought in the second cited section.
+
+      The note above calls this the weakest question the corpus can answer,
+      which was true of the HW3 set. hw4_q3 was added at the same time and
+      scores 0.4799, lower still, so that claim did not survive its own
+      question set.
 
   # --- nothing to answer with -------------------------------------------
   - id: hw4_q6_offtopic_sourdough

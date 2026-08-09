@@ -72,7 +72,7 @@ generation:
   use_cached_answers: true
   # Fallback, first layer: below this score the LLM is not called at all.
   #
-  # Measured in the configuration this pipeline runs, over the eight
+  # Measured in the configuration this pipeline runs, over the first eight
   # questions in configs/qa_questions.yaml:
   #
   #   0.1258  sourdough bread          - off-topic, no answer
@@ -91,6 +91,9 @@ generation:
   # to separate. 0.45 also works on these eight questions and every
   # decision below is the same either way; 0.40 just leaves more room
   # before a reworded question gets stopped by mistake.
+  #
+  # hw4_q9 was added after the threshold was chosen and did not change it:
+  # it scores 0.6786, far above either candidate.
   #
   # What the gate can't do, the refusal rule in the prompt does, and
   # outputs/rag_answers_examples.md shows it doing so on two questions.
