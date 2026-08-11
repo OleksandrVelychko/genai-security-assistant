@@ -156,9 +156,15 @@ class CveRecord(BaseModel):
     # makes a CVE dynamic: a published record can be rescored or withdrawn.
     vuln_status: str
     description: str
-    cvss_v31_score: float | None = Field(default=None, ge=0.0, le=10.0)
-    cvss_v31_severity: str | None = None
-    cvss_v31_vector: str | None = None
+    cvss_score: float | None = Field(default=None, ge=0.0, le=10.0)
+    cvss_severity: str | None = None
+    cvss_vector: str | None = None
+    cvss_version: str | None = None
+    # Whose score this is. NVD ("Primary") and the CNA ("Secondary")
+    # disagree by more than a point on some records, so an answer that
+    # quotes a number has to say who produced it.
+    cvss_source: str | None = None
+    cvss_type: str | None = None
     cwe_ids: list[str] = Field(default_factory=list)
     reference_urls: list[str] = Field(default_factory=list)
     source: str = "NVD CVE API 2.0"
