@@ -38,6 +38,7 @@ paths:
   tool_questions: "configs/tool_questions.yaml"
   tool_examples: "outputs/tool_examples.md"
   tool_conclusions: "configs/tool_conclusions.md"
+  router_decisions: "index/router_decisions.json"
 
 chunking:
   chunk_size: 700          # target characters (assignment range: 500-1000)

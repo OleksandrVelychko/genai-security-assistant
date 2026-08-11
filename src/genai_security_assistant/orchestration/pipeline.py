@@ -24,6 +24,7 @@ from genai_security_assistant.generation.llm import ChatClient, build_chat_clien
 from genai_security_assistant.models.generation import GroundedAnswer
 from genai_security_assistant.models.orchestration import AssistantAnswer
 from genai_security_assistant.models.tools import ToolObservation
+from genai_security_assistant.orchestration.llm_router import build_llm_router
 from genai_security_assistant.orchestration.router import Router, RuleRouter
 from genai_security_assistant.tools.registry import ToolRegistry, build_registry
 
@@ -60,7 +61,6 @@ class Answerer(Protocol):
 
 def failure_text(observation: ToolObservation) -> str:
     """Say why a call produced nothing.
-
     Written here rather than asked of the model: there is no result to
     ground an answer in, and a model asked to explain a failure invents
     detail that reads like fact.
@@ -91,16 +91,24 @@ class ToolAugmentedAnswerer:
         cls,
         settings: Settings | None = None,
         live: bool = False,
-        router: Router | None = None,
+        use_llm_router: bool = False,
     ) -> ToolAugmentedAnswerer:
         """Build everything from configs/base.yaml."""
         resolved = settings or Settings()
         config = resolved.generation_config()
         use_cache = resolved.generation.get("use_cached_answers", True)
+        # Built first: the model-backed router is shown its schemas.
+        registry = build_registry(resolved, live=live)
 
         return cls(
-            router=router or RuleRouter(),
-            registry=build_registry(resolved, live=live),
+            # Rules by default. They need no key and no network, which is
+            # what lets the reports be regenerated from a fresh clone.
+            router=(
+                build_llm_router(resolved, registry, live=live)
+                if use_llm_router
+                else RuleRouter()
+            ),
+            registry=registry,
             retrieval=RAGAnswerer.from_settings(resolved, live=live),
             # The same file HW4 writes to. Entries are keyed by a hash of
             # the messages, so a tool answer and a chunk answer never

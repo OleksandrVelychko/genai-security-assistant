@@ -4,6 +4,9 @@ The rule-based router classifies a question with regular expressions and
 needs neither model access nor a network connection, which is what lets
 the evaluation reports be regenerated offline.
 
+A router backed by a model is in llm_router.py. It reaches the same kind of
+decision by different means, and the pipeline treats the two the same.
+
 Routing is decision-only. The router selects a proposed execution path but
 never executes a tool and never confirms a state-changing operation. The
 registry validates and dispatches the call, and a write waits for explicit
