@@ -13,9 +13,21 @@ human confirmation.
 from __future__ import annotations
 
 import re
+from typing import Protocol
 
 from genai_security_assistant.models.orchestration import RouteDecision
 from genai_security_assistant.models.tools import ToolRequest
+
+
+class Router(Protocol):
+    """What the pipeline needs from a router."""
+
+    name: str
+
+    def route(self, question: str) -> RouteDecision:
+        """Decide where one question goes. Never executes anything."""
+        ...
+
 
 # Matches the identifier as it appears in a sentence, punctuation and all.
 # The four-digit year and the four-or-more-digit number are what keep an
@@ -28,8 +40,9 @@ class RuleRouter:
 
     name = "rule_router"
 
+
     def route(self, question: str) -> RouteDecision:
-        """Decide where one question goes."""
+        """Decide where one question goes. Never executes anything."""
         match = CVE_IN_TEXT.search(question)
         if match is None:
             return RouteDecision(
