@@ -44,6 +44,7 @@ class Settings:
         self.embeddings: dict[str, Any] = raw.get("embeddings", {})
         self.retrieval: dict[str, Any] = raw.get("retrieval", {})
         self.generation: dict[str, Any] = raw.get("generation", {})
+        self.tools: dict[str, Any] = raw.get("tools", {})
 
     def path(self, key: str) -> Path:
         """Resolve a configured relative path against the project root."""
@@ -69,6 +70,10 @@ class Settings:
         block["temperature"] = self.generation.get("temperature", 0)
         block["max_output_tokens"] = self.generation.get("max_output_tokens", 600)
         return block
+
+    def nvd_config(self) -> dict[str, Any]:
+        """Return the NVD client config from configs/base.yaml."""
+        return dict(self.tools.get("nvd", {}))
 
 
 def load_sources(manifest_path: Path) -> list[dict[str, Any]]:

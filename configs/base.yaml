@@ -32,6 +32,12 @@ paths:
   prompt_improvements: "outputs/rag_prompt_improvements.md"
   answer_conclusions: "configs/answer_conclusions.md"
   prompt_conclusions: "configs/prompt_conclusions.md"
+  # HW5
+  cve_cache: "index/cve_cache.json"
+  findings: "data/findings.jsonl"
+  tool_questions: "configs/tool_questions.yaml"
+  tool_examples: "outputs/tool_examples.md"
+  tool_conclusions: "configs/tool_conclusions.md"
 
 chunking:
   chunk_size: 700          # target characters (assignment range: 500-1000)
@@ -125,3 +131,17 @@ retrieval:
     # the paper the method comes from, kept unchanged - tuning it against
     # eleven queries would fit noise rather than anything real.
   rrf_k: 60
+
+tools:
+  # Read answers from index/cve_cache.json when they are there.
+  # scripts/external_tool.py --live overrides this for one run.
+  use_cached_responses: true
+  nvd:
+    base_url: "https://services.nvd.nist.gov/rest/json/cves/2.0"
+    # Optional. NVD allows 5 requests per rolling 30 seconds without a key
+    # and 50 with one: https://nvd.nist.gov/developers/start-here
+    api_key_env: "NVD_API_KEY"
+    timeout_seconds: 20
+    # NIST asks callers to sleep between requests rather than burst. Six
+    # seconds keeps a keyless run inside the limit without tracking a window.
+    min_interval_seconds: 6

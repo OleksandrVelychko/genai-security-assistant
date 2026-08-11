@@ -16,6 +16,8 @@ dependencies = [
     "python-dotenv>=1.0.1",
     # HW3: keyword half of the hybrid search
     "rank-bm25>=0.2.2",
+    # HW5: the external tool layer talks to the NVD CVE API
+    "httpx>=0.28.1",
 ]
 
 [project.optional-dependencies]
