@@ -1,0 +1,24 @@
+{
+  "0b274451806852e554957771fc03404b854e8cc704b5e23d999328cd8b69a6ae": {
+    "choice": {
+      "arguments": {},
+      "raw_arguments": null,
+      "tool_name": null,
+      "unreadable": false
+    },
+    "created_at": "2026-08-12 12:52:21Z",
+    "question_hint": "How do I prevent prompt injection?"
+  },
+  "41647b351b85c20c0dd5d16449c6d1f1bbd4f69dfec1de922b5dfe53da719a78": {
+    "choice": {
+      "arguments": {
+        "cve_id": "CVE-2025-68664"
+      },
+      "raw_arguments": "{\"cve_id\":\"CVE-2025-68664\"}",
+      "tool_name": "lookup_cve",
+      "unreadable": false
+    },
+    "created_at": "2026-08-12 12:17:14Z",
+    "question_hint": "What is the status of CVE-2025-68664?"
+  }
+}
