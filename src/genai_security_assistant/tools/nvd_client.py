@@ -6,6 +6,10 @@ lets the cache and the tests stand in for the network.
 
 This module is transport only. It returns the response body as it came, or
 raises. Deciding what a body means is the tool's job, not the client's.
+
+Use of this API is subject to the NVD Terms of Use
+(https://nvd.nist.gov/developers/terms-of-use). The notice they ask for is
+displayed in README.md and at the top of outputs/tool_examples.md.
 """
 
 from __future__ import annotations

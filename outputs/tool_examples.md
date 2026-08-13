@@ -1,7 +1,10 @@
 # External tool integration — examples
 
-Generated: 2026-08-13 11:57:48Z
+Generated: 2026-08-13 21:10:33Z
 Model: `gpt-4.1-mini` · Router: `rule_router`
+
+> This product uses the NVD API but is not endorsed or certified by
+> the NVD.
 
 Regenerate with `uv run python scripts/run_tool_examples.py`.
 The prose below is written by hand in `configs/tool_questions.yaml`
@@ -220,6 +223,8 @@ Schema as the model receives it:
 }
 ```
 
+Replayed from cache: `True`
+
 **Final answer:**
 
 CVE-2025-68664 has a high severity with a CVSS score of 8.2, as rated by the National Vulnerability Database (nvd@nist.gov) using the CVSS version 3.1. This vulnerability affects LangChain versions prior to 0.3.81 and 1.2.5 and involves a serialization injection issue. The record was retrieved on 2026-08-11.
@@ -285,6 +290,8 @@ scorer, and the answer names both.
 }
 ```
 
+Replayed from cache: `True`
+
 **Final answer:**
 
 The status of CVE-2024-5565 is "Deferred." This information was retrieved on 2026-08-11.
@@ -325,6 +332,8 @@ the state on one day and cannot be told that day has passed.
   "error_message": "NVD holds no record for CVE-2023-99999."
 }
 ```
+
+Replayed from cache: `True`
 
 **Final answer:**
 
@@ -377,6 +386,8 @@ than that it has no information.
   "title": "LangChain deserialization affects our agent"
 }
 ```
+
+Replayed from cache: `False`
 
 **Final answer:**
 

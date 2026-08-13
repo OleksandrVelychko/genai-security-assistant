@@ -168,7 +168,12 @@ class CveLookupTool(BaseTool):
         try:
             payload = self.client.fetch_cve(arguments.cve_id)
         except NvdError as error:
+            # No from_cache here: only bodies are cached, never failures,
+            # so a transport error is always live.
             return ToolObservation.fail(self.spec.name, error.code, error.message)
+
+        # Only the cache sets this; a bare client has no such attribute.
+        replayed = getattr(self.client, "last_was_cached", False)
 
         record = normalize_cve(payload)
         if record is None:
@@ -176,13 +181,11 @@ class CveLookupTool(BaseTool):
                 self.spec.name,
                 "not_found",
                 f"NVD holds no record for {arguments.cve_id}.",
+                from_cache=replayed,
             )
 
         return ToolObservation.ok(
-            self.spec.name,
-            record.model_dump(mode="json"),
-            # Only the cache sets this; a bare client has no such attribute.
-            from_cache=getattr(self.client, "last_was_cached", False),
+            self.spec.name, record.model_dump(mode="json"), from_cache=replayed
         )
 
 

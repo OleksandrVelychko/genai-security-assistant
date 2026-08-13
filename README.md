@@ -781,8 +781,199 @@ when one answer does not.
       rag_answers_v2c.md
       rag_answers_v3nr.md
 
+## HW5 - External tools
+
+HW4 ended with an assistant that answers well from six static documents and
+has no way to learn anything they do not contain. This is that part.
+
+`question -> route -> validate -> external source -> normalized result -> answer`
+
+The retrieval path is untouched. `RAGAnswerer` is unchanged and every HW4
+answer is still produced the same way; the new layer sits above it and
+decides whether to use it at all.
+
+### The two tools
+
+| | `lookup_cve` | `record_security_finding` |
+|---|---|---|
+| Type | read | write |
+| Source | NVD CVE API 2.0 | `data/findings.jsonl` |
+| Returns | one CVE record, flattened | the stored finding |
+| Call it when | the question names a CVE identifier, or asks whether one has been rescored or withdrawn | the user asks for a finding to be recorded |
+| Do not call it when | the question is about a class of risk, or names no identifier | the user is asking a question rather than asking to write |
+
+`lookup_cve` takes an identifier and nothing else. NVD also offers a
+keyword search and it is deliberately not exposed: a free-text parameter
+filled in by a model is a query the model wrote.
+
+### Input and output contracts
+
+Both contracts are pydantic models in `models/tools.py`, and the JSON
+schema shown to the model is generated from the same class that validates
+the call, so the two cannot disagree.
+
+    uv run python scripts/external_tool.py --schemas
+
+`CveLookupInput` accepts one field, `cve_id`, matching `^CVE-\d{4}-\d{4,}$`.
+`CveRecord` returns the identifier, publication and modification dates,
+NVD's processing status, the English description, one CVSS assessment with
+its scorer, CWE ids, references and the timestamp NVD stamped on the
+response.
+
+### Validation
+
+Every call goes through `BaseTool.run` before a tool sees it, so no tool
+can forget any of this:
+
+| Check | Where | What it stops |
+|---|---|---|
+| Required fields present | `CveLookupInput`, `SecurityFindingInput` | a call with nothing to look up |
+| Identifier shape and plausible year | `CveLookupInput` | `CVE-23-1`, `CVE-1998-0001` |
+| Unknown arguments rejected | `extra="forbid"` | a search phrase smuggled in beside the identifier |
+| Confirmation before a write | `BaseTool.run` | a write proposed by a model and approved by nobody |
+
+`confirmed` lives on `ToolRequest`, not in any tool's arguments, so it never
+appears in a schema the model is shown. A model cannot approve its own
+write.
+
+`outputs/tool_examples.md` has a table of refused calls, each one executed.
+
+### How to run it
+
+Call one tool directly. **No API key is needed for this**: no model is
+involved, so it shows the integration layer on its own.
+
+    uv run python scripts/external_tool.py -t lookup_cve -a cve_id=CVE-2023-29374
+    uv run python scripts/external_tool.py -t record_security_finding \
+        -a title="..." -a severity=high -a summary="..." --confirm
+
+Ask a question and let the router decide:
+
+    uv run python scripts/external_tool.py -q "How severe is CVE-2025-68664?"
+    uv run python scripts/external_tool.py -q "..." --llm-router
+    uv run python scripts/external_tool.py -q "..." --live
+
+Regenerate the report:
+
+    uv run python scripts/run_tool_examples.py
+
+### Results
+
+Working with real responses produced the finding the design turned on. One
+CVE record carries several CVSS assessments, NVD's own labelled `Primary`
+and the reporting CNA's labelled `Secondary`, and they disagree:
+
+| record | Primary | Secondary |
+|---|---|---|
+| CVE-2025-68664 | 8.2 | 9.3 |
+| CVE-2025-67644 | 7.8 | 7.3 |
+| CVE-2026-34070 | none | 7.5 |
+| CVE-2024-5565 | none | 8.1 |
+
+On the first record the secondary entry is listed first, so
+`metrics["cvssMetricV31"][0]` returns 9.3 where NVD says 8.2. Two records
+carry no `Primary` at all, so preferring it is not enough on its own.
+`CveRecord` therefore keeps `cvss_source` and `cvss_type` beside the score,
+and the answer names the scorer:
+
+> a CVSS score of 8.2, which is classified as HIGH severity according to
+> the NVD (nvd@nist.gov)
+
+### Two routers
+
+The same decision is reached two ways. `RuleRouter` reads the question with
+a regular expression and needs neither a key nor a network. `LlmRouter`
+shows the model the schemas the registry renders and asks it to pick one
+tool, or none.
+
+On five of six test questions they agree, including on declining to call
+any tool for "how do I prevent prompt injection". They separate on a
+request to record a finding: the rules see an identifier and propose
+`lookup_cve`, the model proposes `record_security_finding` and fills every
+argument from the user's own words. The confirmation gate then refuses it.
+
+Rules are the default, so the reports are reproducible without a key.
+
+### Why NVD responses are cached
+
+The fourth and fifth caches in this repository, for the reason the first
+three exist. NVD answers change, and a model asked to pick a tool can pick
+differently the second time.
+
+`index/cve_cache.json` holds the raw response bodies, unparsed. That is
+deliberate: `generation/answer_cache.py` stores the model's text rather
+than the citations read out of it, which is why fixing the citation parser
+cost no API calls. The same holds here, and it was needed - the first
+normalizer read the wrong CVSS entry.
+
+`index/router_decisions.json` holds routing decisions, keyed by the model,
+the router's system message, the question and the schemas. Change any of
+them and the old decision is not reused.
+
+### Known limitations
+
+- **The rule-based router reads one identifier and nothing else.** It
+  cannot tell a lookup question from a request to record a finding, and it
+  takes the first identifier when a question names two.
+- **One model, one temperature, one cached decision per question.** No
+  routing result here was confirmed by a repeat.
+- **Six routing questions.** Enough to show one difference between the
+  routers, not enough to say how often they differ.
+- **Required fields are not a control.** They describe a valid call. A
+  model is free to invent them; the confirmation gate is what governs the
+  action.
+- **A request missing required fields needs a clarifying question**, not a
+  different route. The orchestration layer has no way to ask one.
+- **The write tool appends to a local file.** Authorisation, retention and
+  who may confirm are all outside it.
+
+Full analysis: `configs/tool_conclusions.md`, folded into the report.
+
+### Layout
+
+    configs/
+      tool_questions.yaml         # examples, refusals, router questions
+      tool_conclusions.md         # HW5 analysis (source of truth)
+    data/
+      findings.jsonl              # append-only audit log
+    index/
+      cve_cache.json              # frozen NVD responses
+      router_decisions.json       # frozen routing decisions
+    scripts/
+      external_tool.py            # CLI: one tool, or one routed question
+      run_tool_examples.py        # regenerate the report
+    src/genai_security_assistant/
+      models/tools.py             # ToolSpec, ToolRequest, ToolObservation, contracts
+      models/orchestration.py     # ToolChoice, RouteDecision, AssistantAnswer
+      tools/
+        base.py                   # validation and the confirmation gate
+        nvd_client.py             # the NVD API behind a Protocol
+        cve_cache.py              # frozen responses
+        cve_lookup.py             # read tool
+        findings.py               # write tool
+        registry.py               # name -> tool, schemas for the model
+      orchestration/
+        router.py                 # rule-based routing
+        llm_router.py             # routing by function calling
+        router_cache.py           # frozen decisions
+        pipeline.py               # route, then run
+    outputs/
+      tool_examples.md            # generated report (HW5 deliverable)
+
 ## License and attribution
 
 Source documents are © OWASP Foundation, licensed **CC-BY-SA 4.0**. Attribution
 is preserved per chunk in `metadata.publisher`, `metadata.source_url` and
 `metadata.license`. Pipeline code in this repository is the author's own work.
+
+Data retrieved from the NVD API is subject to the
+[NVD Terms of Use](https://nvd.nist.gov/developers/terms-of-use), which ask
+that a service using the API display this notice:
+
+> This product uses the NVD API but is not endorsed or certified by the NVD.
+
+The terms also state that content modified after retrieval may not be
+attributed to the NVD. Nothing here modifies it: `CveRecord` selects fields
+and flattens the structure without altering a value, and the unmodified
+response bodies stay in `index/cve_cache.json`. What an answer attributes to
+the NVD is what the NVD returned.

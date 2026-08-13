@@ -96,13 +96,24 @@ class ToolObservation(BaseModel):
         return cls(tool_name=tool_name, success=True, data=data, from_cache=from_cache)
 
     @classmethod
-    def fail(cls, tool_name: str, code: ToolErrorCode, message: str) -> ToolObservation:
-        """Build a failed observation."""
+    def fail(
+        cls,
+        tool_name: str,
+        code: ToolErrorCode,
+        message: str,
+        from_cache: bool = False,
+    ) -> ToolObservation:
+        """Build a failed observation.
+        from_cache matters here too: a record that doesn't exist is read
+        from the cache like any other, and a report that says otherwise is
+        claiming a network call that never happened.
+        """
         return cls(
             tool_name=tool_name,
             success=False,
             error_code=code,
             error_message=message,
+            from_cache=from_cache,
         )
 
 

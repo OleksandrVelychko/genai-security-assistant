@@ -155,7 +155,16 @@ def render_example(
                 },
                 indent=2,
             )
-        lines += ["**Result:**", "", "```json", body, "```", ""]
+        lines += [
+            "**Result:**",
+            "",
+            "```json",
+            body,
+            "```",
+            "",
+            f"Replayed from cache: `{observation.from_cache}`",
+            "",
+        ]
 
     if answer.grounded is not None:
         lines += ["**Result:** chunks retrieved from the indexed documents", ""]
@@ -242,6 +251,9 @@ def main() -> None:
         "",
         f"Generated: {datetime.now(timezone.utc):%Y-%m-%d %H:%M:%SZ}",
         f"Model: `{generation['model']}` · Router: `{answerer.router.name}`",
+        "",
+        "> This product uses the NVD API but is not endorsed or certified by",
+        "> the NVD.",
         "",
         "Regenerate with `uv run python scripts/run_tool_examples.py`.",
         "The prose below is written by hand in `configs/tool_questions.yaml`",

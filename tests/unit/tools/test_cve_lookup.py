@@ -290,3 +290,16 @@ def test_a_transport_failure_keeps_its_code():
     observation = run(CveLookupTool(client), cve_id="CVE-2025-11111")
 
     assert observation.error_code == "rate_limited"
+
+def test_a_missing_record_still_says_where_it_was_read_from():
+    """The body of an empty result is cached like any other."""
+
+    class CachedStub(StubNvdClient):
+        last_was_cached = True
+
+    client = CachedStub({"timestamp": TIMESTAMP, "vulnerabilities": []})
+
+    observation = run(CveLookupTool(client), cve_id="CVE-2025-11111")
+
+    assert observation.error_code == "not_found"
+    assert observation.from_cache is True
