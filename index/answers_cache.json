@@ -23,6 +23,12 @@
     "model": "gpt-4.1-mini",
     "question_hint": "What is unbounded consumption and how do I limit LLM resource usage?\n\nAnswer:"
   },
+  "2c4deb5421abd92a21c51a1132648e142808e457b3b4354f951171a5947275c0": {
+    "answer": "CVE-2025-68664 has a high severity with a CVSS score of 8.2, as rated by the National Vulnerability Database (nvd@nist.gov) using the CVSS version 3.1. This vulnerability affects LangChain versions prior to 0.3.81 and 1.2.5 and involves a serialization injection issue. The record was retrieved on 2026-08-11.",
+    "created_at": "2026-08-12 17:48:47Z",
+    "model": "gpt-4.1-mini",
+    "question_hint": "How severe is CVE-2025-68664?\n\nAnswer:"
+  },
   "3b66385fc5922aa79a3d045c9b151f16fc43f4afaf46abdf497f957904427896": {
     "answer": "Excessive Agency is a vulnerability in LLM-based systems where the system is granted too much ability to perform actions, such as calling functions or interfacing with other systems via extensions, which can lead to damaging actions in response to unexpected, ambiguous, or manipulated LLM outputs. It typically arises from excessive functionality, excessive permissions, or excessive autonomy granted to the LLM agent. Common causes include hallucination or confabulation from poorly engineered prompts or a poorly performing model, as well as direct or indirect prompt injection from malicious users, compromised extensions, or malicious peer agents in multi-agent systems [owasp_llm06_excessive_agency_chunk_001][owasp_llm06_excessive_agency_chunk_002][owasp_llm06_excessive_agency_chunk_003].",
     "created_at": "2026-08-08 12:36:22Z",
@@ -209,6 +215,12 @@
     "model": "gpt-4.1-mini",
     "question_hint": "What is unbounded consumption and how do I limit LLM resource usage?\n\nAnswer:"
   },
+  "ca293401f38f11ce3216b90b999d1dda7794ea3c4f5298715bcd94db4b0f1b95": {
+    "answer": "The status of CVE-2024-5565 is \"Deferred.\" This information was retrieved on 2026-08-11.",
+    "created_at": "2026-08-12 17:48:48Z",
+    "model": "gpt-4.1-mini",
+    "question_hint": "What is the status of CVE-2024-5565?\n\nAnswer:"
+  },
   "cd8f0b0dccf20296d8d367618f204897e3065d0765d61031f445261eb3db2a0d": {
     "answer": "To validate and constrain the output format of an LLM, you should:\n\n1. Specify clear output formats that the LLM is expected to follow.\n2. Request detailed reasoning and source citations in the output to ensure transparency.\n3. Use deterministic code to validate that the output adheres to the specified formats.\n4. Define sensitive categories and construct rules for identifying and handling such content.\n5. Apply semantic filters and use string-checking techniques to scan for non-allowed content.\n6. Evaluate responses using the RAG Triad, which assesses context relevance, groundedness, and question/answer relevance to identify potentially malicious outputs.\n\nAdditionally, monitoring LLM outputs for signs of injection attacks or suspicious patterns is important. For example, implementing an output validator that checks for patterns like system prompt leakage or API key exposure can help filter unsafe responses and constrain output length to prevent security risks.\n\nThese steps help ensure that the LLM outputs are safe, relevant, and conform to expected formats [owasp_llm01_prompt_injection_chunk_010][owasp_cs_prompt_injection_prevention_chunk_024].",
     "created_at": "2026-08-08 22:17:41Z",
@@ -250,6 +262,12 @@
     "created_at": "2026-08-08 21:44:38Z",
     "model": "gpt-4.1-mini",
     "question_hint": "Why is it dangerous to give an AI agent broad permissions and many tools?\n\nAnswer:"
+  },
+  "ec42e469b5f7ef190602deed54ad6e839a72053130f3f49109e0e3f73ca7d3be": {
+    "answer": "A high severity finding titled \"LangChain deserialization affects our agent\" has been recorded, confirming that our agent is exposed to CVE-2025-68664. The issue arises because our agent deserializes prompts from user input, which is the exploitation pattern of this CVE. This finding was confirmed and recorded on 2026-08-12T12:12:01.591833Z.",
+    "created_at": "2026-08-12 17:48:50Z",
+    "model": "gpt-4.1-mini",
+    "question_hint": "Record a finding that our agent is exposed to CVE-2025-68664.\n\nAnswer:"
   },
   "f1ee39cde5a08247fe2b4b852255404d7fc48402eaf51268b7e225d7dd5c065a": {
     "answer": "The status of CVE-2025-68664 is \"Analyzed\" according to the NVD CVE API 2.0. This vulnerability affects LangChain versions prior to 0.3.81 and 1.2.5 and has been patched in those versions. The record was retrieved on 2026-08-11.",

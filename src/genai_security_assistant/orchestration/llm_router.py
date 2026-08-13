@@ -35,17 +35,24 @@ from genai_security_assistant.models.tools import ToolRequest
 from genai_security_assistant.orchestration.router_cache import CachedToolChooser
 from genai_security_assistant.tools.registry import ToolRegistry
 
-ROUTER_SYSTEM = """You route questions for a GenAI application security \
-assistant.
+ROUTER_SYSTEM = """You route questions and requests for a GenAI \
+application security assistant.
 
 The assistant answers from an indexed set of OWASP documents about LLM and
 AI agent security. Those documents are static, they describe classes of
 risk rather than named vulnerabilities, and nothing in them changes after
 they were indexed.
 
-Call a tool only when the documents cannot answer for one of those reasons.
-Do not answer the question yourself. Either call one tool, or call none."""
+Call a read tool only when the documents cannot answer for one of those
+reasons.
 
+Not every input is a question. Asking for something to be recorded, logged
+or filed is a request to act, and the documents cannot satisfy it at all:
+route it to the tool that performs the action, not to one that looks
+something up.
+
+Do not answer or perform anything yourself. Either call one tool, or call
+none."""
 
 def as_tool_params(
     tools: list[dict[str, Any]],
