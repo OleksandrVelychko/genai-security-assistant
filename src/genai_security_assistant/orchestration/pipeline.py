@@ -50,6 +50,23 @@ Question:
 
 Answer:"""
 
+RESULT_FENCE = "</result>"
+
+
+def fence_safe(payload: str) -> str:
+    """Neutralize text in a payload that would close its own fence.
+
+    A CVE description is written by the organization that reported the
+    vulnerability, so it is third-party input. JSON escapes quotes and
+    control characters but not angle brackets, so a description containing
+    the closing tag would end the block early and the rest would read as
+    prompt rather than as data.
+
+    JSON reads "\\/" as "/", so the string the model parses is unchanged
+    while the literal delimiter no longer appears.
+    """
+    return payload.replace(RESULT_FENCE, "<\\/result>")
+
 
 class Answerer(Protocol):
     """What the pipeline needs from the retrieval side."""
@@ -157,7 +174,9 @@ class ToolAugmentedAnswerer:
 
         user = TOOL_USER.format(
             tool_name=observation.tool_name,
-            result=json.dumps(observation.data, indent=2, sort_keys=True),
+            result=fence_safe(
+                json.dumps(observation.data, indent=2, sort_keys=True)
+            ),
             question=question,
         )
         return self.chat.complete(TOOL_SYSTEM, user)

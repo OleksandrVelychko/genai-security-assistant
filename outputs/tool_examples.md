@@ -1,6 +1,6 @@
 # External tool integration — examples
 
-Generated: 2026-08-13 21:10:33Z
+Generated: 2026-08-14 06:45:25Z
 Model: `gpt-4.1-mini` · Router: `rule_router`
 
 > This product uses the NVD API but is not endorsed or certified by
@@ -649,4 +649,12 @@ regenerated report shows the same record as the committed one.
   answer follows from the record it read was checked by eye.
 - **The write tool appends to a local file.** Authorization, retention,
   storage permissions and who may confirm a write are all outside it.
+- **The findings log is committed.** `data/findings.jsonl` is in the
+  repository so a regenerated report shows the same record as the committed
+  one. That's right for an example and wrong for real use: a log of
+  security findings belongs where access to it is controlled.
+- **Nothing bounds the size of a response.** The NVD client has a timeout
+  and no limit on the body it will read into memory and cache. NVD is a
+  trusted source, but `base_url` is configuration, and a different source
+  behind it wouldn't be.
 

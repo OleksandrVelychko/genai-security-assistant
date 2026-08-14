@@ -926,6 +926,10 @@ them and the old decision is not reused.
   different route. The orchestration layer has no way to ask one.
 - **The write tool appends to a local file.** Authorisation, retention and
   who may confirm are all outside it.
+- **The findings log is committed**, so the report reproduces. A real
+  deployment would write it somewhere with access control.
+- **Nothing bounds the response size.** The client has a timeout and no
+  body limit; `base_url` is configuration, and the trust in it is implicit.
 
 Full analysis: `configs/tool_conclusions.md`, folded into the report.
 
