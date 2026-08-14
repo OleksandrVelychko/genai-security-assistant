@@ -1,0 +1,1 @@
+{"finding_id":"find_e83f63a1cff0","title":"LangChain deserialization affects our agent","severity":"high","related_cve_id":"CVE-2025-68664","summary":"Our agent deserializes prompts from user input, which is the pattern this CVE exploits.","recorded_at":"2026-08-12T12:12:01.591833Z","proposed_by":"cli","confirmed":true}

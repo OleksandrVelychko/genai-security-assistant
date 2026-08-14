@@ -1,0 +1,135 @@
+# Examples for outputs/tool_examples.md.
+#
+# Prose is written by hand; the calls and their results are filled in by
+# scripts/run_tool_examples.py from a real run. An example with a `tool`
+# block is called directly, because no router proposes a write.
+
+examples:
+  - id: t1
+    question: "How severe is CVE-2025-68664?"
+    expected_route: tool
+    why: |
+      Nothing in the corpus can answer this, and a knowledge base could not
+      be made to.
+
+      The six indexed documents are the OWASP LLM Top 10 2025 edition and
+      its companions. This CVE was published on 2025-12-23 and last modified
+      on 2026-06-17, long after the guidance was written. A document that
+      did mention it would still carry whatever score it had on the day it
+      was written.
+
+      The second reason is subtler and is the one that decided the design.
+      NVD scores this record 8.2 and the CNA that reported it scores the
+      same record 9.3 - a gap wide enough to move it between severity bands
+      in most triage policies. A chunk of text holds one number and no way
+      to say whose it is. The tool returns the number together with its
+      scorer, and the answer names both.
+
+  - id: t2
+    question: "What is the status of CVE-2024-5565?"
+    expected_route: tool
+    why: |
+      The record is from 2024, so age is not the argument here. Its NVD
+      status is Deferred, meaning NVD has stopped enriching it.
+
+      Status describes how the record is being processed, not what the
+      vulnerability is, and it changes while the vulnerability does not.
+      The same identifier has been Awaiting Analysis, Analyzed and Deferred
+      at different times, and will change again. A static document records
+      the state on one day and cannot be told that day has passed.
+
+  - id: t3
+    question: "What do we know about CVE-2023-99999?"
+    expected_route: tool
+    why: |
+      This identifier is well formed and does not exist.
+
+      Retrieval that finds nothing cannot tell "not in these documents"
+      apart from "not real". Both come back as an absence, and the HW4
+      refusal sentence is the same in either case - which is a problem,
+      because the two mean different things to whoever asked.
+
+      Asking the authority settles it. NVD answers with an empty result,
+      and the assistant can say the identifier is not registered rather
+      than that it has no information.
+
+  - id: t4
+    question: "Record a finding that our agent is exposed to CVE-2025-68664."
+    expected_route: tool
+    confirm: true
+    tool: record_security_finding
+    arguments:
+      title: "LangChain deserialization affects our agent"
+      severity: "high"
+      related_cve_id: "CVE-2025-68664"
+      summary: >-
+        Our agent deserializes prompts from user input, which is the
+        pattern this CVE exploits.
+    why: |
+      Retrieval answers questions. It cannot make anything true.
+
+      This request is not a question at all, and the comparison is between
+      a tool and no tool rather than a tool and retrieval. Without one the
+      assistant can only tell the user what to write down somewhere else.
+      With one the record exists, carries an identifier derived from its
+      own content, and states who proposed it and that a human confirmed
+      it.
+
+      The identifier is what makes the call safe to repeat. Submitting the
+      same finding twice appends nothing and returns the first record, so
+      a retry after a timeout leaves one row rather than two.
+
+  - id: t5
+    question: "How do I prevent prompt injection?"
+    expected_route: retrieval
+    why: |
+      The counter-example, and the reason the router exists.
+
+      No identifier appears, and the question asks about a class of risk
+      rather than one record. lookup_cve takes an identifier and cannot
+      search by keyword, so it has nothing to offer here. The rule router
+      declines because it finds no identifier; the model declines because
+      the schema tells it not to use the tool for a class of risk.
+
+      Retrieval answers from five chunks of LLM01 and cites three of them.
+      A tool that fired here would replace a grounded answer with nothing.
+
+# Calls the tool layer refuses. Executed for real, so the report shows the
+# actual message rather than one that was true when it was written.
+refusals:
+  - description: "An identifier that is not the right shape."
+    tool: lookup_cve
+    arguments: {cve_id: "CVE-23-1"}
+
+  - description: "A year before the CVE program existed."
+    tool: lookup_cve
+    arguments: {cve_id: "CVE-1998-0001"}
+
+  - description: "A required field left out."
+    tool: lookup_cve
+    arguments: {}
+
+  - description: "A search phrase smuggled in beside the identifier."
+    tool: lookup_cve
+    arguments: {cve_id: "CVE-2025-68664", keyword: "prompt injection"}
+
+  - description: "A write proposed without human confirmation."
+    tool: record_security_finding
+    arguments:
+      title: "LangChain deserialization affects our agent"
+      severity: "high"
+      summary: "Our agent deserializes prompts from user input."
+
+# Questions for the router comparison only. The five examples above are
+# included by default; these are added because they separate the two
+# routers, which the examples on their own do not.
+router_questions:
+  - "How severe is CVE-2025-68664?"
+  - "What is the status of CVE-2024-5565?"
+  - "What do we know about CVE-2023-99999?"
+  - "Record a finding that our agent is exposed to CVE-2025-68664."
+  - "How do I prevent prompt injection?"
+  - >-
+    Log a high severity finding titled 'LangChain deserialization affects
+    our agent': our agent deserializes prompts from user input, which is
+    the pattern CVE-2025-68664 exploits.

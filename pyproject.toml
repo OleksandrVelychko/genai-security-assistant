@@ -14,6 +14,10 @@ dependencies = [
     "numpy>=2.1.0",
     "openai>=2.0.0",
     "python-dotenv>=1.0.1",
+    # HW3: keyword half of the hybrid search
+    "rank-bm25>=0.2.2",
+    # HW5: the external tool layer talks to the NVD CVE API
+    "httpx>=0.28.1",
 ]
 
 [project.optional-dependencies]
@@ -28,7 +32,14 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
+    "ruff>=0.6",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "W", "C4", "FURB"]
