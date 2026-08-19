@@ -20,6 +20,7 @@ from genai_security_assistant.models.tools import (
     ToolRequest,
     ToolSpec,
 )
+from genai_security_assistant.tools.asset_inventory import build_asset_inventory_tools
 from genai_security_assistant.tools.base import Tool
 from genai_security_assistant.tools.cve_lookup import build_cve_lookup_tool
 from genai_security_assistant.tools.findings import build_record_finding_tool
@@ -98,5 +99,23 @@ def build_registry(
         [
             build_cve_lookup_tool(resolved, live=live),
             build_record_finding_tool(resolved),
+        ]
+    )
+
+
+def build_agent_registry(
+    settings: Settings | None = None, live: bool = False
+) -> ToolRegistry:
+    """Build the tools the HW6 workflow can call.
+    Separate from build_registry, not added to it: LlmRouter hashes the
+    rendered schemas into its cache key, so two more tools would invalidate
+    index/router_decisions.json and rewrite outputs/tool_examples.md.
+    """
+    resolved = settings or Settings()
+    return ToolRegistry(
+        [
+            build_cve_lookup_tool(resolved, live=live),
+            build_record_finding_tool(resolved),
+            *build_asset_inventory_tools(resolved),
         ]
     )
