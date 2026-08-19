@@ -1,4 +1,4 @@
-"""Data contracts for the external tool layer (HW5).
+"""Data contracts for the external tool layer (HW5, extended in HW6).
 
 Declared here, filled in by the tools package, the same way
 models/retrieval.py and models/generation.py work.
@@ -8,7 +8,9 @@ Four groups:
   ToolRequest     - a proposed call, not yet validated
   ToolObservation - the result of one call, successful or not
   Input / Output  - one pair per tool: CveLookupInput / CveRecord,
-                    SecurityFindingInput / FindingRecord
+                    SecurityFindingInput / FindingRecord,
+                    AssetInventoryInput / ServiceExposure,
+                    ServiceOwnerInput / ServiceOwner
 """
 
 from __future__ import annotations
@@ -214,3 +216,64 @@ class FindingRecord(BaseModel):
     recorded_at: datetime
     proposed_by: str
     confirmed: bool
+
+
+# The two tools below answer questions about the organization running the
+# assistant. Neither the OWASP corpus nor NVD holds those facts, which is
+# why triage needs a workflow and a single lookup doesn't.
+
+
+class AssetInventoryInput(BaseModel):
+    """Arguments for check_asset_inventory."""
+
+    cve_id: str = Field(
+        pattern=CVE_ID_PATTERN,
+        max_length=30,
+        description=(
+            "CVE identifier in the form CVE-YYYY-NNNN. Returns the services "
+            "running a component this CVE affects."
+        ),
+    )
+
+    # An identifier and nothing else, for the reason CveLookupInput gives:
+    # a free-text component name is a name the model wrote.
+    model_config = ConfigDict(extra="forbid")
+
+
+Environment = Literal["production", "staging", "development"]
+
+
+class ServiceExposure(BaseModel):
+    """One deployed service running a component the CVE affects."""
+
+    service_id: str
+    service_name: str
+    component: str
+    installed_version: str
+    # None while no fix is published. Compared against installed_version by
+    # the assess_exposure step: a tool reports what is deployed,
+    # a step decides what that means.
+    fixed_version: str | None = None
+    environment: Environment
+    internet_facing: bool
+
+
+class ServiceOwnerInput(BaseModel):
+    """Arguments for get_service_owner."""
+
+    service_id: str = Field(
+        max_length=64,
+        pattern=r"^svc-[a-z0-9-]+$",
+        description="Service identifier as returned by check_asset_inventory.",
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ServiceOwner(BaseModel):
+    """Who to notify about one service."""
+
+    service_id: str
+    team: str
+    contact: str
+    escalation_channel: str
