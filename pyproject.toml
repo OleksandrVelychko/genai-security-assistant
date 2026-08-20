@@ -18,6 +18,10 @@ dependencies = [
     "rank-bm25>=0.2.2",
     # HW5: the external tool layer talks to the NVD CVE API
     "httpx>=0.28.1",
+    # HW7: the same workflow, rebuilt as a graph. One direct dependency
+    # that brings nineteen more, langsmith among them - the tracing
+    # client stays quiet unless LANGSMITH_TRACING is set.
+    "langgraph>=1.2.11",
 ]
 
 [project.optional-dependencies]
