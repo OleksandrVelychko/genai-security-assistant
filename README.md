@@ -964,6 +964,275 @@ Full analysis: `configs/tool_conclusions.md`, folded into the report.
     outputs/
       tool_examples.md            # generated report (HW5 deliverable)
 
+## HW6 - Controlled agent workflow
+
+HW5 ended with an assistant that answers one question with one action, and
+a limitation written down underneath it: a request missing what it needs
+has no route to take. This is that part.
+
+`goal -> route -> step -> observation -> state -> next step -> answer`
+
+The retrieval path is untouched again, and so is the HW5 tool layer. The
+HW5 registry is deliberately left alone: two more tools would change the
+schemas `LlmRouter` hashes into its cache key, and `outputs/tool_examples.md`
+has to keep reproducing. The workflow builds its own registry instead.
+
+### The use case
+
+**Vulnerability triage for the team that runs this assistant.** A security
+engineer reads that a CVE was published against a framework their agents
+are built on, and asks one question:
+
+> Does CVE-2025-68664 affect us?
+
+Answering it needs three facts, and no single source holds two of them:
+
+| Fact | Source | In the corpus? |
+|---|---|---|
+| What the flaw is, how severe, whether still current | NVD CVE API | no - the record postdates the documents |
+| Which deployed services run the affected component | deployment inventory | no - not public |
+| What OWASP recommends about this class of flaw | six indexed documents | yes |
+
+The first two are why this is a workflow rather than a longer prompt.
+Later steps take their arguments from earlier observations: the owner is
+looked up by the service id the inventory returned, and the corpus is
+asked about the weakness the record carried. The judgement that joins them
+belongs to neither source.
+
+### The workflow
+
+Routing first. Rules only, no model, no network:
+
+```text
+user goal
+    │
+    ▼
+AgentRouter
+    │
+    ├── names a CVE identifier ────────► triage         8 steps, below
+    ├── about this deployment, no id ──► clarification  ask for one, run nothing
+    └── anything else ─────────────────► guidance       HW4 pipeline, unchanged
+```
+
+The identifier is checked first on purpose: "Does CVE-2025-68664 affect
+us?" matches the deployment wording too, and triage can answer it.
+
+Then the triage plan. Eight steps, four exits:
+
+```text
+triage
+  1  lookup_cve              tool          ── no such record ──► halt
+  2  check_asset_inventory   tool (mock)   ── call failed ─────► halt
+  3  assess_exposure         calls nothing
+         ├── not_affected ───────────────────────────────────► answer
+         ├── patched ────────────────────────────────────────► answer
+         └── exposed
+  4  retrieve_guidance       HW4 retrieval
+  5  identify_owner          tool (mock)   ── no owner ──► carry on
+  6  propose_finding         calls nothing
+  7  confirm_write           gate          ── not confirmed ──► answer
+  8  record_finding          tool, writes
+                                                              ► answer
+```
+
+Step 3 is the one that matters. It reaches no tool, no corpus and no
+clock: it reads the record step 1 returned and the versions step 2
+returned, and produces one word that decides whether five more steps run.
+
+### Routes
+
+| Route | Chosen when | What runs |
+|---|---|---|
+| `triage` | the goal names a CVE identifier | the eight steps above |
+| `guidance` | a class of risk, no identifier, no claim about this deployment | `RAGAnswerer`, unchanged from HW4 |
+| `clarification` | about this deployment, but no identifier | one question back; nothing is executed |
+
+`AgentRoute` is declared separately from `models/orchestration.Route`
+rather than widening it. That one chooses between a tool and the index;
+this one chooses between whole workflows.
+
+### Steps
+
+| # | Step | Calls | Reads from state | Writes to state |
+|---|---|---|---|---|
+| 1 | `lookup_cve` | tool | `cve_id` | `cve_record` |
+| 2 | `check_asset_inventory` | tool | `cve_id` | `affected_services` |
+| 3 | `assess_exposure` | nothing | `cve_record`, `affected_services` | `exposure` |
+| 4 | `retrieve_guidance` | `RAGAnswerer` | `cve_record.cwe_ids` | `guidance` |
+| 5 | `identify_owner` | tool | `affected_services` | `owner` |
+| 6 | `propose_finding` | nothing | `cve_record`, `affected_services` | `proposed_finding` |
+| 7 | `confirm_write` | nothing | `confirmed` | `pending_confirmation` |
+| 8 | `record_finding` | tool | `proposed_finding` | `recorded_finding` |
+| — | `answer_from_documents` | `RAGAnswerer` | `user_goal` | `guidance` |
+| — | `ask_for_clarification` | nothing | — | — |
+
+Read the third column. Steps 3 to 6 and step 8 run on what earlier steps
+wrote; step 7 reads the caller's confirmation, which is the one value no
+step is allowed to produce.
+
+Steps that can end a run return a boolean; the rest return nothing. The
+signature says whether a step is a branch.
+
+### Tools
+
+Four tools, of which two are mock. All four go through `BaseTool`, so the
+mocks are validated, dispatched and reported exactly like the real ones:
+only the data source is stubbed.
+
+| Tool | Type | Source | Real or mock |
+|---|---|---|---|
+| `lookup_cve` | read | NVD CVE API 2.0 | real, replayed from `index/cve_cache.json` |
+| `check_asset_inventory` | read | `configs/asset_inventory.yaml` | **mock** - stands in for an SBOM service |
+| `get_service_owner` | read | `configs/asset_inventory.yaml` | **mock** - stands in for a service catalogue |
+| `record_security_finding` | write | `data/findings.jsonl` | real, appends |
+
+Both mocks accept an identifier and nothing else, for the reason
+`lookup_cve` does: a free-text parameter filled in by a model is a query
+the model wrote. `get_service_owner` goes further and constrains its
+argument to `^svc-[a-z0-9-]+$`, because that value comes from the previous
+step's observation and never from the user's wording.
+
+An empty inventory result is a success, not a `not_found`: "nothing here
+runs it" is the answer `assess_exposure` needs. A failed call halts the
+run instead, because reading a broken inventory as "nothing runs this"
+would report a safety that nothing ever claimed.
+
+### State
+
+`AgentState` is the only thing steps share. A step reads it, writes it and
+touches nothing else, which is what lets each one become a graph node in
+HW7 without its body changing.
+
+| Field | Written by | Read by |
+|---|---|---|
+| `user_goal`, `confirmed` | the caller | the router, `confirm_write` |
+| `route`, `route_reason`, `cve_id` | the router | steps 1 and 2 |
+| `plan` | `run()` | the report, to compare against what ran |
+| `steps` | every step | everything below |
+| `cve_record` | step 1 | steps 3, 4, 6 |
+| `affected_services` | step 2 | steps 3, 5, 6 |
+| `exposure` | step 3 | `run_triage`, the answer |
+| `guidance` | step 4 | the answer |
+| `owner` | step 5 | the answer |
+| `proposed_finding` | step 6 | step 8 |
+| `pending_confirmation` | step 7 | the answer |
+| `recorded_finding` | step 8 | the answer |
+| `halt_reason` | any step that stops | the answer, the tests |
+| `final_answer` | `run()`, once, at the end | the caller |
+
+`completed_steps`, `tool_calls` and `observations` are not fields. They are
+computed from `steps`, so the three cannot drift apart - the same reason
+`GroundedAnswer.sources` and `is_grounded` are derived. `@computed_field`
+puts them in `model_dump()`, so the state printed in the report carries
+them.
+
+### How to run it
+
+One goal. **No API key is needed**: every answer these goals produce is
+already committed.
+
+    uv run python scripts/agent_flow.py -g "Does CVE-2025-68664 affect us?"
+    uv run python scripts/agent_flow.py -g "..." --confirm
+    uv run python scripts/agent_flow.py -g "..." --json
+    uv run python scripts/agent_flow.py -g "..." --live
+
+Regenerate the report:
+
+    uv run python scripts/run_agent_flow_examples.py
+
+That command is not read-only. The confirmed example writes to
+`data/findings.jsonl`, once: a finding id is a hash of its own content, so
+every run after the first appends nothing.
+
+`--confirm` is the human in the loop. No step can supply it, and without it
+the run drafts a finding and stops.
+
+### Results
+
+Seven goals, five outcomes on the triage route, all executed for
+`outputs/agent_flow_examples.md`:
+
+| Goal | Route | Exposure | Steps | Wrote |
+|---|---|---|---|---|
+| CVE-2025-68664, confirmed | triage | exposed | 8 of 8 | yes |
+| CVE-2025-68664, unconfirmed | triage | exposed | 7 of 8 | no |
+| CVE-2025-67644 | triage | patched | 3 of 8 | no |
+| CVE-2024-5565 | triage | not_affected | 3 of 8 | no |
+| CVE-2023-99999 | triage | — | 1 of 8 | no |
+| "How do I prevent prompt injection?" | guidance | — | 1 of 1 | no |
+| "Are we affected by that LangChain bug?" | clarification | — | 1 of 1 | no |
+
+Three of the seven reach `retrieve_guidance`, the only step that calls a
+model. That is the practical form of "state decides the next step": four
+model calls not spent on goals whose answer was already settled.
+
+Working with the corpus produced the finding this design turned on. The
+question `retrieve_guidance` asks is chosen by the CWE on the record, and
+four candidates were measured before two were kept:
+
+| Question | Top score | Status |
+|---|---|---|
+| ...what controls limit a compromised component? | 0.6301 | answered |
+| ...how should an agent handle untrusted input it parses? | 0.5547 | answered |
+| ...validating file paths an application loads? | 0.6004 | **abstained_by_model** |
+| ...limit the permissions of an extension that reads external resources? | 0.7391 | answered |
+
+The third and fourth are the same CVE. The third names the **defect** and
+was refused despite scoring above the `min_score` gate: retrieval found the
+neighbourhood, and the model, having read the chunks, said correctly that
+the documents do not cover it. The fourth names the **control** the
+documents do prescribe, and scored highest of the four.
+
+OWASP guidance is organised around controls, so a question shaped like a
+defect finds adjacent text and no answer. Two things follow: the score gate
+and the prompt's refusal rule catch different failures, and the third row
+is a live example of the second catching what the first let through - and
+the agent layer inherited that refusal without writing it, because
+`GroundedAnswer.abstained` already reports it.
+
+### Known limitations
+
+- **The router reads an identifier, not an intent.** "How severe is
+  CVE-2025-68664?" gets a full exposure triage, which is more than was
+  asked for.
+- **`not_affected` is only as true as the inventory.** Nothing checks that
+  the inventory is complete, and an absent service looks like an unknown one.
+- **No step can ask a follow-up.** Clarification is a route decided before
+  anything runs; a run stopped at the confirmation gate must be started
+  again with `--confirm`.
+- **`version_parts` is not PEP 440.** It compares leading digits and drops
+  the rest, so `2.0.0rc1` and `2.0.0` compare equal.
+- **The guidance map has two entries**, chosen by measurement. It is not a
+  general mapping from CWE to corpus question.
+- **The inventory is a file in this repository.** A real one is a service
+  with access control, an owner and a staleness problem of its own.
+
+Full analysis: `configs/agent_conclusions.md`, folded into the report.
+
+### Layout
+
+    configs/
+      asset_inventory.yaml        # mock deployment inventory and catalogue
+      agent_scenarios.yaml        # the five examples, and every path
+      agent_conclusions.md        # HW6 analysis (source of truth)
+    scripts/
+      agent_flow.py               # CLI: one goal, traced
+      run_agent_flow_examples.py  # regenerate the report
+    src/genai_security_assistant/
+      models/agent.py             # AgentRoute, StepName, AgentDecision,
+                                  # StepRecord, AgentState
+      models/tools.py             # + AssetInventoryInput / ServiceExposure,
+                                  # ServiceOwnerInput / ServiceOwner
+      tools/
+        asset_inventory.py        # the two mock tools
+        registry.py               # + build_agent_registry
+      orchestration/
+        agent_router.py           # three-way rule-based routing
+        triage_rules.py           # the decisions, with no I/O
+        agent_flow.py             # the plan, and the order it runs in
+    outputs/
+      agent_flow_examples.md      # generated report (HW6 deliverable)
+
 ## License and attribution
 
 Source documents are © OWASP Foundation, licensed **CC-BY-SA 4.0**. Attribution
