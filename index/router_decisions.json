@@ -1,0 +1,144 @@
+{
+  "0b274451806852e554957771fc03404b854e8cc704b5e23d999328cd8b69a6ae": {
+    "choice": {
+      "arguments": {},
+      "raw_arguments": null,
+      "tool_name": null,
+      "unreadable": false
+    },
+    "created_at": "2026-08-12 12:52:21Z",
+    "question_hint": "How do I prevent prompt injection?"
+  },
+  "12cbcf635f3c39ec697af3403ef158c176e70c5cc411bb5efb96086be6a27a96": {
+    "choice": {
+      "arguments": {
+        "cve_id": "CVE-2023-99999"
+      },
+      "raw_arguments": "{\"cve_id\":\"CVE-2023-99999\"}",
+      "tool_name": "lookup_cve",
+      "unreadable": false
+    },
+    "created_at": "2026-08-12 17:48:54Z",
+    "question_hint": "What do we know about CVE-2023-99999?"
+  },
+  "1366c4e85770a332c4d0f294bf3ab677c8cd8408989fc305776d9a8afb064efc": {
+    "choice": {
+      "arguments": {
+        "cve_id": "CVE-2025-68664"
+      },
+      "raw_arguments": "{\"cve_id\":\"CVE-2025-68664\"}",
+      "tool_name": "lookup_cve",
+      "unreadable": false
+    },
+    "created_at": "2026-08-12 17:55:48Z",
+    "question_hint": "Record a finding that our agent is exposed to CVE-2025-68664."
+  },
+  "188ae8a837aee1b223da0583f88410cccec67c3959da9745d42267c31dca2c72": {
+    "choice": {
+      "arguments": {
+        "severity": "high",
+        "summary": "Our agent deserializes prompts from user input, which is the pattern CVE-2025-68664 exploits.",
+        "title": "LangChain deserialization affects our agent"
+      },
+      "raw_arguments": "{\"title\":\"LangChain deserialization affects our agent\",\"severity\":\"high\",\"summary\":\"Our agent deserializes prompts from user input, which is the pattern CVE-2025-68664 exploits.\"}",
+      "tool_name": "record_security_finding",
+      "unreadable": false
+    },
+    "created_at": "2026-08-13 07:04:40Z",
+    "question_hint": "Log a high severity finding titled 'LangChain deserialization affects our agent': our agent deserializes prompts from us"
+  },
+  "2b2034a58bb8698167bef0481595d297fb3ce278b48c3b3a369c258ff15eeb76": {
+    "choice": {
+      "arguments": {
+        "cve_id": "CVE-2025-68664"
+      },
+      "raw_arguments": "{\"cve_id\":\"CVE-2025-68664\"}",
+      "tool_name": "lookup_cve",
+      "unreadable": false
+    },
+    "created_at": "2026-08-12 17:48:52Z",
+    "question_hint": "How severe is CVE-2025-68664?"
+  },
+  "2b879d7749637711124592026a5d272e9c5a1f644988c70ebc7fac46988185c3": {
+    "choice": {
+      "arguments": {
+        "cve_id": "CVE-2023-99999"
+      },
+      "raw_arguments": "{\"cve_id\":\"CVE-2023-99999\"}",
+      "tool_name": "lookup_cve",
+      "unreadable": false
+    },
+    "created_at": "2026-08-12 17:55:45Z",
+    "question_hint": "What do we know about CVE-2023-99999?"
+  },
+  "3afcc970d1904636d24f781cff02bd02dd092ecb5cac3fdb14e129f5c8edf6ce": {
+    "choice": {
+      "arguments": {
+        "cve_id": "CVE-2024-5565"
+      },
+      "raw_arguments": "{\"cve_id\":\"CVE-2024-5565\"}",
+      "tool_name": "lookup_cve",
+      "unreadable": false
+    },
+    "created_at": "2026-08-12 17:55:44Z",
+    "question_hint": "What is the status of CVE-2024-5565?"
+  },
+  "41647b351b85c20c0dd5d16449c6d1f1bbd4f69dfec1de922b5dfe53da719a78": {
+    "choice": {
+      "arguments": {
+        "cve_id": "CVE-2025-68664"
+      },
+      "raw_arguments": "{\"cve_id\":\"CVE-2025-68664\"}",
+      "tool_name": "lookup_cve",
+      "unreadable": false
+    },
+    "created_at": "2026-08-12 12:17:14Z",
+    "question_hint": "What is the status of CVE-2025-68664?"
+  },
+  "46115662ece48e7342a2c073a5a4d69f09c43e33b8d670ade2cdeaabb35df8cf": {
+    "choice": {
+      "arguments": {},
+      "raw_arguments": null,
+      "tool_name": null,
+      "unreadable": false
+    },
+    "created_at": "2026-08-12 17:55:53Z",
+    "question_hint": "How do I prevent prompt injection?"
+  },
+  "7f98145e98c0ea4639e09ed3ea2e7e805d9084fee62496ea807b8929bd4f46d5": {
+    "choice": {
+      "arguments": {
+        "cve_id": "CVE-2025-68664"
+      },
+      "raw_arguments": "{\"cve_id\":\"CVE-2025-68664\"}",
+      "tool_name": "lookup_cve",
+      "unreadable": false
+    },
+    "created_at": "2026-08-12 17:48:55Z",
+    "question_hint": "Record a finding that our agent is exposed to CVE-2025-68664."
+  },
+  "bb51416d85ede283f58470485d90fdd335ab18b1b20d301aa504f143b4b5ec4b": {
+    "choice": {
+      "arguments": {
+        "cve_id": "CVE-2025-68664"
+      },
+      "raw_arguments": "{\"cve_id\":\"CVE-2025-68664\"}",
+      "tool_name": "lookup_cve",
+      "unreadable": false
+    },
+    "created_at": "2026-08-12 17:55:44Z",
+    "question_hint": "How severe is CVE-2025-68664?"
+  },
+  "ea6c538a1e4cd264a0ddf4affe80465554aeb2056150b87f5737819a025655da": {
+    "choice": {
+      "arguments": {
+        "cve_id": "CVE-2024-5565"
+      },
+      "raw_arguments": "{\"cve_id\":\"CVE-2024-5565\"}",
+      "tool_name": "lookup_cve",
+      "unreadable": false
+    },
+    "created_at": "2026-08-12 17:48:53Z",
+    "question_hint": "What is the status of CVE-2024-5565?"
+  }
+}
