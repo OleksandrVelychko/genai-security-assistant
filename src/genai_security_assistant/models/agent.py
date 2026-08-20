@@ -5,8 +5,9 @@ models/orchestration.py works. What differs is how much they carry: a
 routing decision describes one action, while a run decides more than once
 and every step after the first reads what the ones before it wrote down.
 
-Two vocabularies and two contracts:
+Two vocabularies and three contracts:
   AgentRoute, StepName - what this layer can choose, and what it can run
+  AgentDecision        - the workflow one goal was sent to, and why
   StepRecord           - one executed step: what ran, and what came back
   AgentState           - everything a run accumulates, and all a step sees
 """
@@ -56,6 +57,21 @@ StepName = Literal[
 ExposureLevel = Literal["not_affected", "patched", "exposed"]
 
 
+class AgentDecision(BaseModel):
+    """Which workflow one goal gets, and the grounds for it.
+    Decision-only, like RouteDecision in HW5: this reads the goal, and the
+    flow that acts on it is what calls a tool.
+    """
+
+    route: AgentRoute
+    reason: str
+    decided_by: str
+    # Set on the triage route only: the identifier the flow looks up.
+    cve_id: str | None = None
+    # Set on the clarification route only: what to put back to the user.
+    question: str | None = None
+
+
 class StepRecord(BaseModel):
     """One executed step: what ran, and what came back.
     request and observation are empty for a step that calls nothing. note
@@ -83,6 +99,9 @@ class AgentState(BaseModel):
 
     route: AgentRoute | None = None
     route_reason: str = ""
+    # The identifier the router read out of the goal, normalized. Two steps
+    # need it, and re-reading the goal in each would let them disagree.
+    cve_id: str | None = None
     plan: list[StepName] = Field(default_factory=list)
     steps: list[StepRecord] = Field(default_factory=list)
 
