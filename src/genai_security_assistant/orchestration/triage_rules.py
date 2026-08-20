@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from itertools import takewhile
 
+from genai_security_assistant.models.agent import ExposureLevel
 from genai_security_assistant.models.tools import (
     CveRecord,
     FindingSeverity,
@@ -80,7 +81,7 @@ def exposed_services(services: list[ServiceExposure]) -> list[ServiceExposure]:
     return [service for service in services if is_below_fix(service)]
 
 
-def exposure_of(services: list[ServiceExposure]) -> str:
+def exposure_of(services: list[ServiceExposure]) -> ExposureLevel:
     """Decide what the inventory result means for this organization.
     An empty list is not_affected rather than an error: the inventory
     answered, and what it answered was nothing.
