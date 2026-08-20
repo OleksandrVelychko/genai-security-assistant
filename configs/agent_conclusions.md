@@ -19,8 +19,11 @@ only because a third one, which calls nothing, concluded `exposed`.
 ## The step that calls nothing is the step that decides
 
 `assess_exposure` reaches no tool, no corpus and no clock. It reads the
-CVSS score the lookup returned and the installed versions the inventory
-returned, and it produces one word.
+installed and fixed versions the inventory returned, and produces one
+word. The CVE record is read later instead - step 4 picks the corpus
+question from its CWE, step 6 sets the finding severity from its CVSS
+score - so the two sources meet across the plan rather than inside one
+step.
 
 Every branch in the workflow turns on that word. `not_affected` and
 `patched` end the run three steps in; `exposed` runs five more, one of
@@ -33,14 +36,15 @@ lookup straight to a conclusion with nothing in between to disagree with.
 
 ## What the state saves is measured in model calls
 
-`retrieve_guidance` is the only step that calls a model, and it sits
-behind the assessment. Of the seven paths in the table above, three reach
-it. The other four - patched, not affected, no such record, and the
-clarification route - complete without one.
+Two steps call a model, and both go through `RAGAnswerer`:
+`retrieve_guidance` on the triage route and `answer_from_documents` on the
+guidance route. Only the first is conditional - it sits behind the
+assessment.
 
-This is the practical form of "state decides the next step". It is not a
-style preference; it is four model calls not spent on goals where the
-answer was already known.
+Of the seven runs in the table above, three reach a model call: two
+through `retrieve_guidance`, one through `answer_from_documents`. The
+other four - patched, not affected, no such record, and clarification -
+complete without one.
 
 ## A guidance question must name a control, not a defect
 

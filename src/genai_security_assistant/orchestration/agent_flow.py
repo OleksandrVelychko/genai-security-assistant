@@ -256,7 +256,7 @@ class ControlledAgentFlow:
         return True
 
     def assess_exposure(self, state: AgentState) -> None:
-        """Decide what the two lookups mean together. Calls nothing."""
+        """Decide what the inventory rows mean for this deployment. Calls nothing."""
         exposure = exposure_of(state.affected_services)
         state.exposure = exposure
         notes = {

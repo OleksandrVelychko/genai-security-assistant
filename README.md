@@ -1036,8 +1036,11 @@ triage
 ```
 
 Step 3 is the one that matters. It reaches no tool, no corpus and no
-clock: it reads the record step 1 returned and the versions step 2
-returned, and produces one word that decides whether five more steps run.
+clock: it reads the versions step 2 returned and produces one word that
+decides whether five more steps run. The record from step 1 is read later
+instead - by step 4 to choose the question, and by step 6 to set the
+severity - so the two sources meet across the plan rather than in any one
+step.
 
 ### Routes
 
@@ -1057,7 +1060,7 @@ this one chooses between whole workflows.
 |---|---|---|---|---|
 | 1 | `lookup_cve` | tool | `cve_id` | `cve_record` |
 | 2 | `check_asset_inventory` | tool | `cve_id` | `affected_services` |
-| 3 | `assess_exposure` | nothing | `cve_record`, `affected_services` | `exposure` |
+| 3 | `assess_exposure` | nothing | `affected_services` | `exposure` |
 | 4 | `retrieve_guidance` | `RAGAnswerer` | `cve_record.cwe_ids` | `guidance` |
 | 5 | `identify_owner` | tool | `affected_services` | `owner` |
 | 6 | `propose_finding` | nothing | `cve_record`, `affected_services` | `proposed_finding` |
@@ -1109,7 +1112,7 @@ HW7 without its body changing.
 | `route`, `route_reason`, `cve_id` | the router | steps 1 and 2 |
 | `plan` | `run()` | the report, to compare against what ran |
 | `steps` | every step | everything below |
-| `cve_record` | step 1 | steps 3, 4, 6 |
+| `cve_record` | step 1 | steps 4 and 6 |
 | `affected_services` | step 2 | steps 3, 5, 6 |
 | `exposure` | step 3 | `run_triage`, the answer |
 | `guidance` | step 4 | the answer |
@@ -1149,7 +1152,7 @@ the run drafts a finding and stops.
 
 ### Results
 
-Seven goals, five outcomes on the triage route, all executed for
+Seven runs, five outcomes on the triage route, all executed for
 `outputs/agent_flow_examples.md`:
 
 | Goal | Route | Exposure | Steps | Wrote |
@@ -1162,9 +1165,11 @@ Seven goals, five outcomes on the triage route, all executed for
 | "How do I prevent prompt injection?" | guidance | — | 1 of 1 | no |
 | "Are we affected by that LangChain bug?" | clarification | — | 1 of 1 | no |
 
-Three of the seven reach `retrieve_guidance`, the only step that calls a
-model. That is the practical form of "state decides the next step": four
-model calls not spent on goals whose answer was already settled.
+Three of the seven runs reach a step that calls a model: two through
+`retrieve_guidance` on the triage route, one through
+`answer_from_documents` on the guidance route. The other four complete
+without one. That is the practical form of "state decides the next step":
+four model calls not spent where the answer was already settled.
 
 Working with the corpus produced the finding this design turned on. The
 question `retrieve_guidance` asks is chosen by the CWE on the record, and
