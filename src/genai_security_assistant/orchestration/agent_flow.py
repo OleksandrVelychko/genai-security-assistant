@@ -262,7 +262,7 @@ class ControlledAgentFlow:
         notes = {
             "not_affected": "Nothing deployed runs the affected component.",
             "patched": "Every affected service is already on the fix.",
-            "exposed": exposed_summary(state.affected_services),
+            "exposed": f"{exposed_summary(state.affected_services)}.",
         }
         add_step(state, "assess_exposure", notes[exposure])
 

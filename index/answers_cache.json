@@ -11,6 +11,12 @@
     "model": "gpt-4.1-mini",
     "question_hint": "How severe is CVE-2025-68664?\n\nAnswer:"
   },
+  "1b3ce73d16801159fec465d35e66404d56bbccbeb4217ba7b9ee73a16bc2287e": {
+    "answer": "Controls that limit what a compromised component of an LLM application can do include implementing least privilege access controls and defense-in-depth measures to restrict permissions and access scope [owasp_llm_governance_checklist_chunk_049]. Specifically, limiting the permissions granted to LLM extensions to the minimum necessary reduces the scope of undesirable actions, such as restricting an LLM agent to read-only access on a product database without insert, update, or delete capabilities [owasp_llm06_excessive_agency_chunk_012]. Additionally, restricting the extensions that LLM agents can call to only those essential for their function prevents unnecessary capabilities, for example, disallowing URL fetching if not required [owasp_llm06_excessive_agency_chunk_009]. These controls help contain the impact of a compromised component by minimizing its ability to perform harmful actions.",
+    "created_at": "2026-08-20 09:26:31Z",
+    "model": "gpt-4.1-mini",
+    "question_hint": "What controls limit what a compromised component of an LLM application can do?\n\nAnswer:"
+  },
   "22aebbda18b219f8004811a0191ff849f557df2501fadb1ddb7ee18f2018b583": {
     "answer": "Excessive Agency is a vulnerability in LLM-based systems where the system is granted too much ability or autonomy to perform actions, such as calling functions or interfacing with other systems via extensions, in response to prompts. This vulnerability enables damaging actions to be performed in response to unexpected, ambiguous, or manipulated outputs from an LLM, regardless of the cause of the malfunction.\n\nThe root causes of Excessive Agency typically include:\n- Excessive functionality granted to the LLM-based system\n- Excessive permissions given to the system\n- Excessive autonomy allowed to the system\n\nCommon triggers that can lead to Excessive Agency include hallucination or confabulation caused by poorly-engineered prompts or a poorly-performing model, as well as direct or indirect prompt injection from malicious users, compromised extensions, or malicious peer agents in multi-agent systems. (Chunks owasp_llm06_excessive_agency_chunk_001, owasp_llm06_excessive_agency_chunk_002, owasp_llm06_excessive_agency_chunk_003)",
     "created_at": "2026-08-08 15:42:43Z",
@@ -203,6 +209,12 @@
     "model": "gpt-4.1-mini",
     "question_hint": "What is excessive agency and what causes it?\n\nAnswer:"
   },
+  "b72fd8ef75088d8f38908f317851f4f2d2a1358638350be4badd5601bbe17d1f": {
+    "answer": "An AI agent should treat all external data as untrusted, including user messages, retrieved documents, API responses, and emails, and implement input sanitization before including such content in the agent's context. It is important to use delimiters and clear boundaries between instructions and data, apply content filtering for known injection patterns, and consider using separate LLM calls to validate or summarize untrusted content. Architecturally, the dual-LLM pattern can limit damage by having a privileged LLM that holds tools but never reads untrusted content directly, while a quarantined LLM reads untrusted content but cannot take action; the privileged model only receives structured summaries or labels, breaking the path for injected instructions to influence the actor. This approach helps refuse actions that drift due to injected instructions, thus limiting the damage from hostile input [owasp_cs_ai_agent_security_chunk_009][owasp_cs_prompt_injection_prevention_chunk_036].",
+    "created_at": "2026-08-20 09:33:31Z",
+    "model": "gpt-4.1-mini",
+    "question_hint": "How should an AI agent handle untrusted input that it parses or loads, and what limits the damage when that input is hos"
+  },
   "b9b73c89a3bb4e55b625128cde56941d83b95e4e5eeca352952f2136c63d6208": {
     "answer": "To stop someone from hijacking your model with crafted input (i.e., to prevent prompt injection attacks), you should implement the following measures:\n\n1. **Robust Input Validation:**  \n   Apply strict input validation methods to detect and filter out potentially harmful or sensitive data inputs. This helps ensure that malicious or unintended inputs do not compromise the model’s behavior.\n\n2. **Access Controls:**  \n   Limit access to sensitive data and model capabilities based on the principle of least privilege. Only grant access to data and functions necessary for the specific user or process, reducing the attack surface.\n\n3. **Safeguards in System Prompts and Input Handling:**  \n   Build safeguards into system prompts and carefully handle user inputs to mitigate prompt injection attempts. This includes sanitizing inputs and designing prompts that are resilient to manipulation.\n\n4. **Ongoing Model Training and Safety Updates:**  \n   Continuously update the model’s training data and safety mechanisms to address new prompt injection techniques and jailbreaking attempts, as fine-tuning alone does not fully mitigate these vulnerabilities.\n\nBy combining these strategies, you can significantly reduce the risk of attackers hijacking your model through crafted inputs.",
     "created_at": "2026-08-08 15:41:59Z",
@@ -280,6 +292,18 @@
     "created_at": "2026-08-08 21:44:42Z",
     "model": "gpt-4.1-mini",
     "question_hint": "How can I validate and constrain the output format of an LLM?\n\nAnswer:"
+  },
+  "f74a9e50128cdb26eecea75a2beb0f5b5078222fff2869bd585f24bf3be75b34": {
+    "answer": "An LLM application should limit the permissions granted to an extension to the minimum necessary for its intended operation, such as only granting read access to the specific resources needed and not broader permissions like insert, update, or delete. This can be enforced by applying appropriate permissions to the identity used by the extension when connecting to external systems. Additionally, actions performed on behalf of a user should be executed in the context of that specific user with the minimum privileges required, ensuring user authorization and security scope are tracked and enforced, for example, by requiring user authentication with minimal scope via OAuth [owasp_llm06_excessive_agency_chunk_012][owasp_llm06_excessive_agency_chunk_013].",
+    "created_at": "2026-08-20 09:43:55Z",
+    "model": "gpt-4.1-mini",
+    "question_hint": "How should an LLM application limit the permissions of an extension that reads external resources on a user's behalf?\n\nA"
+  },
+  "f9bc95b29ebb70cfd68946c13ef38fe6d60a268a92f24a49526371f94c6f6bc9": {
+    "answer": "I do not have enough information in the indexed OWASP documents to answer this question.",
+    "created_at": "2026-08-20 09:33:53Z",
+    "model": "gpt-4.1-mini",
+    "question_hint": "What does OWASP recommend for validating file paths and external resources an LLM application loads on behalf of a user?"
   },
   "fd9ff3f67bc8e3e678afb44b3794d53e1284056098249d11fa3b3094cf6535a7": {
     "answer": "Giving an AI agent broad permissions and many tools is dangerous because it can lead to Excessive Agency, which is typically caused by excessive functionality, excessive permissions, or excessive autonomy. This excessive agency can result in a wide range of impacts across confidentiality, integrity, and availability, depending on which systems the AI agent can interact with. Additionally, unrestricted tool access or wildcard permissions can increase security risks, such as allowing the agent to execute arbitrary code without sandboxing or make high-impact decisions without human oversight. Therefore, it is advised not to give agents unrestricted tool access or wildcard permissions to minimize these risks [owasp_llm06_excessive_agency_chunk_003][owasp_cs_ai_agent_security_chunk_056].",
