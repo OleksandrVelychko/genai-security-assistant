@@ -7,6 +7,7 @@ Run from the project root:
     uv run python scripts/langgraph_flow.py -g "..." --json
     uv run python scripts/langgraph_flow.py -g "..." --live
     uv run python scripts/langgraph_flow.py --graph
+    uv run python scripts/langgraph_flow.py --png outputs/langgraph_graph.png
 
 What it prints
 --------------
@@ -14,6 +15,8 @@ One line per node as the graph finishes it, with the state keys that node
 wrote, the call it made and what it concluded; then the state, then the
 answer. --json adds the whole final state. --graph prints the workflow as a
 Mermaid diagram and exits, which is where the one in README.md comes from.
+--png renders it to an image instead, and is the one command here that reaches
+the network.
 
 The order differs from scripts/agent_flow.py on purpose. That script printed
 the route first, because routing happened before the plan started. Here
@@ -38,6 +41,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
@@ -49,6 +53,7 @@ from genai_security_assistant.models.graph import (
     executed_nodes,
     initial_state,
 )
+from genai_security_assistant.orchestration.graph_diagram import readable_mermaid
 from genai_security_assistant.orchestration.langgraph_flow import LangGraphTriageFlow
 
 LINE = "=" * 78
@@ -78,6 +83,14 @@ def parse_args() -> argparse.Namespace:
         "--graph",
         action="store_true",
         help="Print the workflow as a Mermaid diagram and exit.",
+    )
+    parser.add_argument(
+        "--png",
+        metavar="PATH",
+        help=(
+            "Render the graph to a PNG at PATH. The one command in this "
+            "repository that reaches the network."
+        ),
     )
     return parser.parse_args()
 
@@ -188,14 +201,42 @@ def print_answer(state: TriageState) -> None:
     print(state.get("final_answer") or "")
 
 
+def write_png(flow: LangGraphTriageFlow, destination: Path) -> None:
+    """Render the graph to a PNG, and be explicit about what that costs.
+
+    draw_mermaid_png sends the diagram to https://mermaid.ink and gets an
+    image back, so this is the one thing here that reaches the network on
+    purpose: everything else replays from index/ and runs from a fresh
+    clone with no key.
+
+    It also renders LangGraph's own drawing rather than the grouped one
+    --graph prints, because the framework's renderer takes no Mermaid of
+    ours. The same nineteen edges, without the box and the colors - fine
+    for the slide this is for, and the reason README.md uses --graph.
+    """
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        flow.graph.get_graph().draw_mermaid_png(output_file_path=str(destination))
+    except (ImportError, ValueError) as error:
+        raise SystemExit(
+            f"Could not render the PNG: {error}\n"
+            "The same graph is available offline with --graph."
+        ) from error
+    print(f"Wrote {destination}")
+
+
 def main() -> None:
     args = parse_args()
     flow = LangGraphTriageFlow.from_settings(Settings(), live=args.live)
 
     if args.graph:
-        # draw_mermaid renders from the compiled graph, so what it prints is
-        # the graph that just ran, not a picture kept alongside it.
-        print(flow.graph.get_graph().draw_mermaid())
+        # Read off the compiled graph, so what it prints is the graph that
+        # would have run, not a picture kept alongside it.
+        print(readable_mermaid(flow.graph))
+        return
+
+    if args.png:
+        write_png(flow, Path(args.png))
         return
 
     if not args.goal:

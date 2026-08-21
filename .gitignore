@@ -18,3 +18,8 @@ Thumbs.db
 
 # Embedding model cache (HuggingFace / sentence-transformers)
 .cache/
+
+# Rendered diagrams. The Mermaid source lives in the report and in the
+# README, where a changed graph shows up as a changed diff; a PNG is one
+# rendering of that source and starts going stale the moment it is written.
+outputs/*.png
