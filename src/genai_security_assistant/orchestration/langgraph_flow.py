@@ -324,10 +324,16 @@ class LangGraphTriageFlow:
         """Write the finding, now that a human has approved it."""
         finding = state.get("proposed_finding")
         assert finding is not None
+        # BaseTool.run refuses a write whose request is not confirmed, and
+        # this is the value it refuses on. Passing True unconditionally, as
+        # HW6 does, makes that refusal a formality: a flow asserting its own
+        # approval is not a second barrier. Reading what the gate concluded
+        # arms it - a graph rewired around confirm_write is then stopped by
+        # the tool, which is what HW6 claimed two independent refusals meant.
         request = ToolRequest(
             tool_name="record_security_finding",
             arguments=finding.model_dump(),
-            confirmed=True,
+            confirmed=state.get("write_authorized") is True,
             proposed_by="langgraph_flow",
         )
         observation = self.registry.run(request)
@@ -482,6 +488,35 @@ class LangGraphTriageFlow:
     def run(self, user_goal: str, confirmed: bool = False) -> TriageState:
         """Run one goal to the end and return the state it finished with."""
         return self.graph.invoke(initial_state(user_goal, confirmed))
+
+    def run_traced(
+        self, user_goal: str, confirmed: bool = False
+    ) -> tuple[TriageState, list[list[str]]]:
+        """Run one goal, and report what each node wrote as well as the state.
+
+        invoke() returns the state a run finished with and says nothing about
+        which node put what there. Streaming both modes at once does:
+        "updates" carries one node's return value, "values" the whole state
+        after it. Asking for them together keeps this to a single run - a
+        second stream would execute every node again, including the one that
+        writes.
+
+        The second return value lines up with state["nodes"], one entry per
+        executed node, each listing the state keys that node wrote. 'nodes'
+        is left out of them, because every node writes it.
+        """
+        final: TriageState | None = None
+        written: list[list[str]] = []
+        for mode, chunk in self.graph.stream(
+            initial_state(user_goal, confirmed), stream_mode=["updates", "values"]
+        ):
+            if mode == "values":
+                final = chunk
+                continue
+            for update in chunk.values():
+                written.append(sorted(key for key in update if key != "nodes"))
+        assert final is not None
+        return final, written
 
 
 # -- edges -----------------------------------------------------------------

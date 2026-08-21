@@ -187,6 +187,28 @@ def test_an_unconfirmed_run_stops_at_the_gate_and_writes_nothing(tmp_path):
     assert not log.exists()
 
 
+def test_the_write_node_refuses_a_state_the_gate_never_authorized(tmp_path):
+    """The second barrier, armed.
+
+    The graph cannot reach this node without an authorized gate, so this
+    calls it directly - the way a rewiring mistake would. The node still
+    builds a request, and the tool refuses it, which is what makes the two
+    refusals independent rather than one refusal written twice.
+    """
+    log = tmp_path / "findings.jsonl"
+    _, graph = build_both(log)
+
+    prepared = graph.run(EXPOSED, confirmed=False)
+    # The state a rewiring mistake would hand this node: everything the
+    # earlier nodes wrote, and no decision from the gate at all.
+    prepared["write_authorized"] = None
+
+    result = graph.record_finding(prepared)
+
+    assert result["nodes"][0].observation.error_code == "not_confirmed"
+    assert result.get("recorded_finding") is None
+    assert not log.exists()
+
 # --- what the state carries -----------------------------------------------
 
 
