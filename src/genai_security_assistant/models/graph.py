@@ -34,10 +34,14 @@ from genai_security_assistant.models.tools import (
     ToolRequest,
 )
 
-# Every node this graph can run. The names shared with HW6 are spelled the
-# same, so a trace from either implementation lines up row for row.
-# classify_request and build_answer are the two that are new: they are the
-# work run() used to do around the plan rather than inside it.
+# Every node the graph can run, declared once. langgraph_flow.py registers
+# these names and the report reads them back with typing.get_args, so no
+# second list of them exists to fall out of step with this one.
+#
+# The names shared with HW6 are spelled the same, so a trace from either
+# implementation lines up row for row. classify_request and build_answer are
+# the two that are new: they are the work run() used to do around the plan
+# rather than inside it.
 NodeName = Literal[
     "classify_request",
     "lookup_cve",
@@ -77,7 +81,7 @@ class TriageState(TypedDict, total=False):
     there.
     """
 
-    # From the caller. 'confirmed' arrives here for the same reason it
+    # From the caller. `confirmed` arrives here for the same reason it
     # arrives on ToolRequest in HW5: nothing inside approves its own write.
     user_goal: str
     confirmed: bool
@@ -97,13 +101,13 @@ class TriageState(TypedDict, total=False):
     #
     # HW6 appended into a shared list by calling add_step, which meant a
     # step could also have replaced that list. A node here holds no
-    # reference to it and can only add. What the reducer doesn't do is
+    # reference to it and can only add. What the reducer does not do is
     # check anything: a node that writes a misleading note produces a
     # misleading trace either way.
     #
     # The records come out in the order the nodes ran because no
     # conditional edge in this graph selects more than one target, so no
-    # two nodes ever write in the same superstep. That's a property of
+    # two nodes ever write in the same superstep. That is a property of
     # this graph, not a promise from operator.add.
     nodes: Annotated[list[NodeRecord], operator.add]
 
@@ -118,8 +122,21 @@ class TriageState(TypedDict, total=False):
     guidance: GroundedAnswer | None
     owner: ServiceOwner | None
     proposed_finding: SecurityFindingInput | None
-    pending_confirmation: bool
     recorded_finding: FindingRecord | None
+
+    # The write gate, in two fields, because they answer two questions.
+    # 'pending_confirmation' is for the reader: a finding was drafted and
+    # nobody approved it. 'write_authorized' is for the edge, and starts as
+    # None rather than False so that "the gate did not run" and "the gate
+    # said no" stay different values.
+    #
+    # An edge that can't tell those apart routes a run with no gate in it
+    # straight into the write, because the default reads as approval. That
+    # is what the first version of after_confirmation did, and it's the
+    # failure a graph makes possible and a called method doesn't: a step
+    # that never runs still leaves its field at a default.
+    pending_confirmation: bool
+    write_authorized: bool | None
 
     # Written on the clarification branch and nowhere else.
     clarification_question: str | None
@@ -130,11 +147,11 @@ class TriageState(TypedDict, total=False):
 
 
 def initial_state(user_goal: str, confirmed: bool = False) -> TriageState:
-    """Seed every key the graph can write, not only the two it's given.
+    """Seed every key the graph can write, not only the two it is given.
 
     LangGraph carries a key from the moment some node writes it, so a run
     that halts early comes back without the fields it never reached. Code
-    reads with .get() and doesn't care. A report does: a missing
+    reads with .get() and does not care. A report does: a missing
     'exposure' and an 'exposure' of None print the same and mean different
     things - one says nothing decided it, the other says nothing reached it.
     """
@@ -151,8 +168,9 @@ def initial_state(user_goal: str, confirmed: bool = False) -> TriageState:
         "guidance": None,
         "owner": None,
         "proposed_finding": None,
-        "pending_confirmation": False,
         "recorded_finding": None,
+        "pending_confirmation": False,
+        "write_authorized": None,
         "clarification_question": None,
         "halt_reason": None,
         "final_answer": None,
