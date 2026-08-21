@@ -411,7 +411,6 @@ class LangGraphTriageFlow:
         # __optional_keys__. Every TypedDict has both at runtime, and mypy
         # accepts this line. PyCharm doesn't match a TypedDict against a
         # protocol structurally and reports an error that is not one.
-
         # noinspection PyTypeChecker
         graph = StateGraph(TriageState)
 
