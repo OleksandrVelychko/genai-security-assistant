@@ -1,8 +1,8 @@
 """The graph, drawn so a reader can see where it forks (HW7).
 
 draw_mermaid() renders every node and every edge, and on twelve nodes with
-eleven conditional branches what it renders is a thicket: six edges reach
-build_answer from six different depths, and nothing on the page says which
+eleven conditional branches what it renders is a thicket: seven edges reach
+build_answer from seven different depths, and nothing on the page says which
 nodes are the ones that decide.
 
 This draws the same nineteen edges and adds the two things a reader needs:
