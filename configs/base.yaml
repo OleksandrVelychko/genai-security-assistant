@@ -44,6 +44,10 @@ paths:
   agent_scenarios: "configs/agent_scenarios.yaml"
   agent_flow_examples: "outputs/agent_flow_examples.md"
   agent_conclusions: "configs/agent_conclusions.md"
+  # HW7
+  langgraph_scenarios: "configs/langgraph_scenarios.yaml"
+  langgraph_examples: "outputs/langgraph_examples.md"
+  langgraph_conclusions: "configs/langgraph_conclusions.md"
 
 chunking:
   chunk_size: 700          # target characters (assignment range: 500-1000)

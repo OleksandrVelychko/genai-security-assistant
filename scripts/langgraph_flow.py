@@ -49,15 +49,14 @@ from pydantic import BaseModel
 from genai_security_assistant.config import Settings
 from genai_security_assistant.models.graph import (
     NodeName,
+    NodeRecord,
     TriageState,
     executed_nodes,
-    initial_state,
 )
 from genai_security_assistant.orchestration.graph_diagram import readable_mermaid
 from genai_security_assistant.orchestration.langgraph_flow import LangGraphTriageFlow
 
 LINE = "=" * 78
-
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -109,20 +108,14 @@ def plain(value: Any) -> Any:
     return value
 
 
-def print_node(number: int, name: str, update: dict[str, Any]) -> None:
-    """Print one finished node: what it wrote, what it called, what it said."""
-    print(f"{number}. {name}")
+def print_node(number: int, record: NodeRecord, written: list[str]) -> None:
+    """Print one node: what it wrote, what it called, what it concluded."""
+    print(f"{number}. {record.node}")
 
     # The line HW6 could not print. A step there mutated a shared object, so
     # nothing could say which fields that step was responsible for; a node
     # returns exactly them.
-    written = sorted(key for key in update if key != "nodes")
     print(f"   wrote:       {', '.join(written) if written else '— trace only'}")
-
-    records = update.get("nodes", [])
-    if not records:
-        return
-    record = records[0]
 
     request = record.request
     if request is not None:
@@ -138,35 +131,15 @@ def print_node(number: int, name: str, update: dict[str, Any]) -> None:
     print(f"   note:        {record.note}")
 
 
-def run_and_trace(
-    flow: LangGraphTriageFlow, goal: str, confirmed: bool
-) -> TriageState:
-    """Run the goal, printing each node as the graph finishes it.
-
-    Both stream modes at once: "updates" carries what a node just returned,
-    "values" carries the whole state after it. Asking for them together is
-    what keeps this to a single run - a second stream would execute every
-    node again, including the one that writes.
-    """
+def print_trace(goal: str, confirmed: bool, state: TriageState,
+                written: list[list[str]]) -> None:
+    """Print the goal and then every node the run executed, in order."""
     print(LINE)
     print(f"Goal: {goal}")
     print(f"Confirmed: {confirmed}")
     print(LINE)
-
-    final: TriageState | None = None
-    number = 0
-    for mode, chunk in flow.graph.stream(
-        initial_state(goal, confirmed), stream_mode=["updates", "values"]
-    ):
-        if mode == "values":
-            final = chunk
-            continue
-        for name, update in chunk.items():
-            number += 1
-            print_node(number, name, update)
-
-    assert final is not None
-    return final
+    for number, pair in enumerate(zip(state["nodes"], written), start=1):
+        print_node(number, *pair)
 
 
 def print_state(state: TriageState, total_nodes: int) -> None:
@@ -242,7 +215,8 @@ def main() -> None:
     if not args.goal:
         raise SystemExit("--goal is required unless --graph is given.")
 
-    state = run_and_trace(flow, args.goal, args.confirm)
+    state, written = flow.run_traced(args.goal, args.confirm)
+    print_trace(args.goal, args.confirm, state, written)
     print_state(state, total_nodes=len(NodeName.__args__))
     print_answer(state)
 
