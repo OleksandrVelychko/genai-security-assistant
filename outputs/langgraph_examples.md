@@ -1,6 +1,6 @@
 # LangGraph workflow — traced examples
 
-Generated: 2026-08-22 11:48:29Z
+Generated: 2026-08-22 13:51:36Z
 Framework: `langgraph 1.2.11` · Model: `gpt-4.1-mini` · Router: `agent_router`
 
 > This product uses the NVD API but is not endorsed or certified by
