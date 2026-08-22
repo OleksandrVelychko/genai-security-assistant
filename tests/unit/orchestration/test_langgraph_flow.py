@@ -15,14 +15,20 @@ a conftest.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import get_args
 
 import pytest
 
 from genai_security_assistant.config import Settings
 from genai_security_assistant.models.generation import AnswerStatus, GroundedAnswer
-from genai_security_assistant.models.graph import executed_nodes, initial_state
+from genai_security_assistant.models.graph import (
+    NodeName,
+    executed_nodes,
+    initial_state,
+)
 from genai_security_assistant.orchestration.agent_flow import ControlledAgentFlow
 from genai_security_assistant.orchestration.agent_router import AgentRouter
+from genai_security_assistant.orchestration.graph_diagram import readable_mermaid
 from genai_security_assistant.orchestration.langgraph_flow import (
     LangGraphTriageFlow,
     after_confirmation,
@@ -236,3 +242,41 @@ def test_a_node_that_calls_nothing_still_leaves_a_record(tmp_path):
     assert assessment.request is None
     assert assessment.observation is None
     assert assessment.note
+
+
+# --- the graph as data ----------------------------------------------------
+
+
+def test_the_drawing_keeps_every_edge_the_graph_has(tmp_path):
+    """A renderer that drops an edge draws a workflow that does not exist."""
+    _, graph = build_both(tmp_path / "findings.jsonl")
+
+    drawn = readable_mermaid(graph.graph)
+    arrows = [line for line in drawn.splitlines() if "-->" in line or ".->" in line]
+
+    assert len(arrows) == len(graph.graph.get_graph().edges)
+
+
+def test_the_declared_node_names_are_the_ones_the_graph_registered(tmp_path):
+    """compile() lets an unreachable node through; this does not.
+
+    A node registered and never routed to compiles, never runs, and is not
+    drawn either, because the diagram is built from edges. NodeName is the
+    one place those names are declared, and this holds the graph to it.
+    """
+    _, graph = build_both(tmp_path / "findings.jsonl")
+
+    registered = {
+        name for name in graph.graph.get_graph().nodes if not name.startswith("__")
+    }
+
+    assert registered == set(get_args(NodeName))
+
+
+def test_the_trace_and_the_written_fields_line_up(tmp_path):
+    """The report pairs these by position, so the pairing is worth asserting."""
+    _, graph = build_both(tmp_path / "findings.jsonl")
+
+    state, written = graph.run_traced(EXPOSED, confirmed=True)
+
+    assert [record.node for record in state["nodes"]] == [name for name, _ in written]
