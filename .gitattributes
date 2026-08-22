@@ -1,1 +1,5 @@
 * text=auto eol=lf
+
+# The OWASP corpus is source material, not code. Without this GitHub counts
+# three 350 KB HTML pages and calls the whole repository HTML.
+data/raw/** linguist-vendored
