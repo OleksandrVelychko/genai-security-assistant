@@ -22,7 +22,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from importlib.metadata import version
-from typing import Any
+from typing import Any, get_args
 
 from genai_security_assistant.config import Settings, load_yaml
 from genai_security_assistant.models.graph import (
@@ -37,8 +37,7 @@ from genai_security_assistant.orchestration.langgraph_flow import LangGraphTriag
 
 # One traced run, as this report holds it: the state it ended with and the
 # keys each node wrote, in the order the nodes ran.
-Run = tuple[TriageState, list[list[str]]]
-
+Run = tuple[TriageState, list[tuple[NodeName, list[str]]]]
 
 def cell(text: str) -> str:
     """Make one string safe to put in a table cell."""
@@ -114,7 +113,10 @@ def render_trace(run: Run) -> list[str]:
         "| # | Node | Wrote to state | Tool called | Observation | Note |",
         "|---|---|---|---|---|---|",
     ]
-    for number, (record, keys) in enumerate(zip(state["nodes"], written), start=1):
+    for number, (record, (name, keys)) in enumerate(
+        zip(state["nodes"], written, strict=True), start=1
+    ):
+        assert record.node == name
         request = record.request
         call = (
             f"`{request.tool_name}` {arguments_cell(request.arguments)}"
@@ -144,7 +146,7 @@ def render_example(number: int, example: dict[str, Any], run: Run) -> list[str]:
         f"**Confirmed by a human:** {state.get('confirmed')}",
         "",
         f"**Nodes run:** {len(executed_nodes(state))} of "
-        f"{len(NodeName.__args__)} in the graph",
+        f"{len(get_args(NodeName))} in the graph",
         "",
     ]
     lines += render_trace(run)
@@ -180,7 +182,7 @@ def render_example(number: int, example: dict[str, Any], run: Run) -> list[str]:
 
 def render_paths(rows: list[tuple[str, TriageState]]) -> list[str]:
     """One row per outcome the graph can reach, each one executed."""
-    total = len(NodeName.__args__)
+    total = len(get_args(NodeName))
     lines = [
         "| Goal | Confirmed | Route | Exposure | Nodes | Calls | Wrote |",
         "|---|---|---|---|---|---|---|",
@@ -202,6 +204,18 @@ def main() -> None:
     config = load_yaml(settings.path("langgraph_scenarios"))
     flow = LangGraphTriageFlow.from_settings(settings)
     generation = settings.generation_config()
+
+    # One traced run per unique (goal, confirmed) pair. The examples and the
+    # summary table both read from here, so a scenario that appears in both
+    # executes once - and the confirmed one calls the write tool once rather
+    # than twice.
+    executed: dict[tuple[str, bool], Run] = {}
+
+    def scenario(goal: str, confirmed: bool) -> Run:
+        key = (goal, confirmed)
+        if key not in executed:
+            executed[key] = flow.run_traced(goal, confirmed)
+        return executed[key]
 
     lines = [
         "# LangGraph workflow — traced examples",
@@ -234,7 +248,7 @@ def main() -> None:
     ]
 
     for number, example in enumerate(config["examples"], start=1):
-        run = flow.run_traced(example["goal"], example.get("confirm", False))
+        run = scenario(example["goal"], example.get("confirm", False))
         lines += render_example(number, example, run)
 
     lines += [
@@ -245,7 +259,7 @@ def main() -> None:
         "",
     ]
     paths = [
-        (row["goal"], flow.run(row["goal"], row.get("confirm", False)))
+        (row["goal"], scenario(row["goal"], row.get("confirm", False))[0])
         for row in config["paths"]
     ]
     lines += render_paths(paths)

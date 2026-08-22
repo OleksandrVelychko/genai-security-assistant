@@ -33,7 +33,12 @@ from langgraph.graph.state import CompiledStateGraph
 from genai_security_assistant.config import Settings
 from genai_security_assistant.generation.answering import RAGAnswerer
 from genai_security_assistant.models.agent import AgentState
-from genai_security_assistant.models.graph import NodeRecord, TriageState, initial_state
+from genai_security_assistant.models.graph import (
+    NodeName,
+    NodeRecord,
+    TriageState,
+    initial_state,
+)
 from genai_security_assistant.models.tools import (
     CveRecord,
     FindingRecord,
@@ -491,7 +496,7 @@ class LangGraphTriageFlow:
 
     def run_traced(
         self, user_goal: str, confirmed: bool = False
-    ) -> tuple[TriageState, list[list[str]]]:
+    ) -> tuple[TriageState, list[tuple[NodeName, list[str]]]]:
         """Run one goal, and report what each node wrote as well as the state.
 
         invoke() returns the state a run finished with and says nothing about
@@ -501,20 +506,24 @@ class LangGraphTriageFlow:
         second stream would execute every node again, including the one that
         writes.
 
-        The second return value lines up with state["nodes"], one entry per
-        executed node, each listing the state keys that node wrote. 'nodes'
-        is left out of them, because every node writes it.
+        The second return value is one entry per executed node: its name, and
+        the state keys it wrote. The name travels with the keys rather than
+        being recovered by position, because a caller pairing these against
+        state["nodes"] by index would misattribute every row after the first
+        node that returned no record, and say nothing while doing it.
+
+        'nodes' is left out of the key lists, because every node writes it.
         """
         final: TriageState | None = None
-        written: list[list[str]] = []
+        written: list[tuple[NodeName, list[str]]] = []
         for mode, chunk in self.graph.stream(
             initial_state(user_goal, confirmed), stream_mode=["updates", "values"]
         ):
             if mode == "values":
                 final = chunk
                 continue
-            for update in chunk.values():
-                written.append(sorted(key for key in update if key != "nodes"))
+            for name, update in chunk.items():
+                written.append((name, sorted(key for key in update if key != "nodes")))
         assert final is not None
         return final, written
 

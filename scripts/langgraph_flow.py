@@ -42,7 +42,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, get_args
 
 from pydantic import BaseModel
 
@@ -115,7 +115,7 @@ def print_node(number: int, record: NodeRecord, written: list[str]) -> None:
     # The line HW6 could not print. A step there mutated a shared object, so
     # nothing could say which fields that step was responsible for; a node
     # returns exactly them.
-    print(f"   wrote:       {', '.join(written) if written else '— trace only'}")
+    print(f"   wrote:       {', '.join(written) if written else '(trace only)'}")
 
     request = record.request
     if request is not None:
@@ -131,15 +131,24 @@ def print_node(number: int, record: NodeRecord, written: list[str]) -> None:
     print(f"   note:        {record.note}")
 
 
-def print_trace(goal: str, confirmed: bool, state: TriageState,
-                written: list[list[str]]) -> None:
+def print_trace(
+    goal: str,
+    confirmed: bool,
+    state: TriageState,
+    written: list[tuple[NodeName, list[str]]],
+) -> None:
     """Print the goal and then every node the run executed, in order."""
     print(LINE)
     print(f"Goal: {goal}")
     print(f"Confirmed: {confirmed}")
     print(LINE)
-    for number, pair in enumerate(zip(state["nodes"], written), start=1):
-        print_node(number, *pair)
+    # strict=True and the assert are the same guard from two sides: the
+    # lists must be the same length, and each pair must be about one node.
+    for number, (record, (name, keys)) in enumerate(
+        zip(state["nodes"], written, strict=True), start=1
+    ):
+        assert record.node == name
+        print_node(number, record, keys)
 
 
 def print_state(state: TriageState, total_nodes: int) -> None:
@@ -217,7 +226,7 @@ def main() -> None:
 
     state, written = flow.run_traced(args.goal, args.confirm)
     print_trace(args.goal, args.confirm, state, written)
-    print_state(state, total_nodes=len(NodeName.__args__))
+    print_state(state, total_nodes=len(get_args(NodeName)))
     print_answer(state)
 
     if args.json:
