@@ -1238,6 +1238,354 @@ Full analysis: `configs/agent_conclusions.md`, folded into the report.
     outputs/
       agent_flow_examples.md      # generated report (HW6 deliverable)
 
+## HW7 - The same workflow, on a framework
+
+HW6 ended with a workflow whose order lived in one method and whose five
+branching decisions lived in two. This is that same workflow, rebuilt as a
+graph, so the two can be compared on the same seven scenarios.
+
+`goal -> node -> partial update -> merged state -> edge -> next node -> answer`
+
+The difference in one line: **HW6 executes the workflow; HW7 describes it
+and LangGraph executes the description.** A description can be drawn,
+streamed and partly checked at compile time. That is what was bought, and
+the rest of this section is what it cost.
+
+Nothing below the orchestration layer moved. The router, the triage rules,
+the four tools and the HW4 answerer are the ones HW6 uses, called from
+nodes instead of from a plan.
+
+### Why LangGraph
+
+The assignment recommends it; these are the reasons it was kept.
+
+**The vocabulary already matched.** HW6 had a state object, eight steps and
+five branching decisions. LangGraph names exactly those three things -
+state, nodes, edges - so the port is a translation rather than a redesign.
+LlamaIndex Workflows and CrewAI Flows could model the same workflow through
+their own event-oriented abstractions; smolagents is the weakest fit here,
+because its primary abstraction is a model-driven agent loop and this
+workflow deliberately has none.
+
+**This workflow has no agent loop.** No model decides what runs next: the
+router reads rules and `assess_exposure` compares versions. A framework
+built around an LLM choosing its own next action would have had to be
+talked out of doing that.
+
+**Five LangGraph capabilities this repository actually uses.** Not features
+it advertises - the ones this code would otherwise have had to write:
+
+- `add_conditional_edges` with a path map turns each of the five decisions
+  into a declaration, so `build_graph` is the only place the order lives.
+- Partial-update merging means a node returns the fields it wrote and
+  nothing assigns them into a shared object. That contract is what the
+  `Wrote to state` column in the report is reading. HW6 does not expose
+  that information: producing it there would mean snapshotting the state
+  around every step, or changing what a step returns.
+- The `Annotated[list[NodeRecord], operator.add]` reducer concatenates the
+  trace on its own. HW6 needed `add_step`, called by hand from all ten step
+  methods across thirteen call sites, and a step could have replaced the
+  list rather than appended to it.
+- `stream(stream_mode=["updates", "values"])` yields each node's update and
+  the merged state from a single execution. `run_traced` uses it for the
+  CLI trace and the report; a plain `run()` calls `invoke()` and needs
+  none of it.
+- `get_graph()` makes the compiled graph readable: every edge with its
+  label and whether a function chose it. `graph_diagram.py` draws the
+  diagram below from that, so its topology comes out of the compiled graph
+  rather than out of someone's memory - though the block committed here is
+  a copy, and goes stale until it is regenerated.
+
+**Some wiring mistakes stop being possible.** `compile()` refuses an edge
+into an unknown node, a `path_map` target that does not exist, and a graph
+with no entry point. It does not refuse a node nothing routes to.
+
+### The graph
+
+Twelve nodes, nineteen edges. Five `add_conditional_edges` declarations
+render as the eleven dotted arrows - the same five decisions HW6 makes in
+`run` and `run_triage`, one declaration each. A colored node is one a
+routing function reads, and the red one is the gate in front of the only
+node that writes.
+
+Regenerate this block with `uv run python scripts/langgraph_flow.py --graph`.
+
+```mermaid
+graph TD
+    __start__([START])
+    __end__([END])
+
+    __start__ --> classify_request
+    classify_request -. guidance .-> answer_from_documents
+    classify_request -. clarification .-> ask_for_clarification
+    classify_request -. triage .-> lookup_cve
+
+    subgraph plan ["the eight steps HW6 ran as a plan"]
+    direction TB
+        lookup_cve -. continue .-> check_asset_inventory
+        check_asset_inventory -. continue .-> assess_exposure
+        assess_exposure -. exposed .-> retrieve_guidance
+        retrieve_guidance --> identify_owner
+        identify_owner --> propose_finding
+        propose_finding --> confirm_write
+        confirm_write -. confirmed .-> record_finding
+    end
+
+    answer_from_documents --> build_answer
+    ask_for_clarification --> build_answer
+    assess_exposure -. settled .-> build_answer
+    build_answer --> __end__
+    check_asset_inventory -. halt .-> build_answer
+    confirm_write -. blocked .-> build_answer
+    lookup_cve -. halt .-> build_answer
+    record_finding --> build_answer
+
+    classDef branch fill:#fff3cd,stroke:#8a6d00,color:#1a1a1a
+    classDef gate fill:#f8d7da,stroke:#9b2226,color:#1a1a1a
+    class assess_exposure,check_asset_inventory,classify_request,lookup_cve branch
+    class confirm_write gate
+```
+
+The box is `TRIAGE_PLAN` from `agent_flow.py` - the HW6 plan, unchanged,
+drawn as the region it always was.
+
+### State
+
+`TriageState` is a `TypedDict` with `total=False`, because a node returns
+the fields it changed and no others, and every subset of the state is
+therefore a legal update.
+
+```python
+class TriageState(TypedDict, total=False):
+    user_goal: str
+    confirmed: bool
+
+    route: AgentRoute | None
+    route_reason: str
+    cve_id: str | None
+
+    nodes: Annotated[list[NodeRecord], operator.add]
+
+    cve_record: CveRecord | None
+    affected_services: list[ServiceExposure]
+    exposure: ExposureLevel | None
+    guidance: GroundedAnswer | None
+    owner: ServiceOwner | None
+    proposed_finding: SecurityFindingInput | None
+    recorded_finding: FindingRecord | None
+
+    pending_confirmation: bool
+    write_authorized: bool | None
+
+    clarification_question: str | None
+    halt_reason: str | None
+    final_answer: str | None
+```
+
+Two things in there are worth reading twice.
+
+**`nodes` is the only field with a reducer.** Every node appends to it, so
+`operator.add` concatenates what each returned. Everything else uses
+last-value semantics: most fields have a single writer, `guidance` has two
+and `halt_reason` has three, but no two of their writers can run on the
+same path.
+
+**The gate needs two fields, not one.** `pending_confirmation` is for the
+reader; `write_authorized` is what the edge reads, and it starts as `None`
+rather than `False` so that "nobody decided" stays distinct from "decided
+no". `initial_state` seeds every key, so a run that halts early comes back
+with explicit `None`s rather than with keys missing.
+
+### Nodes
+
+Every node also appends one record to `nodes`; that column is left out of
+the table because it would read the same for all twelve.
+
+| Node | Calls | Reads from state | Writes to state |
+|---|---|---|---|
+| `classify_request` | nothing | `user_goal` | `route`, `cve_id`, `route_reason`, `clarification_question` |
+| `lookup_cve` | tool | `cve_id` | `cve_record`, or `halt_reason` |
+| `check_asset_inventory` | tool | `cve_id` | `affected_services`, or `halt_reason` |
+| `assess_exposure` | nothing | `affected_services` | `exposure` |
+| `retrieve_guidance` | `RAGAnswerer` | `cve_record` | `guidance` |
+| `identify_owner` | tool | `affected_services` | `owner` |
+| `propose_finding` | nothing | `cve_record`, `affected_services` | `proposed_finding` |
+| `confirm_write` | nothing | `confirmed` | `write_authorized`, and `pending_confirmation` when it blocks |
+| `record_finding` | tool, writes | `proposed_finding`, `write_authorized` | `recorded_finding`, or `halt_reason` if the tool refuses |
+| `answer_from_documents` | `RAGAnswerer` | `user_goal` | `guidance` |
+| `ask_for_clarification` | nothing | — | — |
+| `build_answer` | nothing | the answer-relevant fields, through `as_agent_state` | `final_answer` |
+
+The first and last are the two HW6 had no name for: it routed before its
+plan started and composed the answer after it ended, so neither appeared in
+`completed_steps`. A graph has no outside.
+
+### Edges
+
+Four selector functions, five conditional declarations - `halted` is wired
+to two of them, because both lookups fail the same way.
+
+| From | Selector | Reads | Goes to |
+|---|---|---|---|
+| `classify_request` | `route_after_classify` | `route` | `lookup_cve` / `answer_from_documents` / `ask_for_clarification` |
+| `lookup_cve` | `halted` | `halt_reason` | `check_asset_inventory` / `build_answer` |
+| `check_asset_inventory` | `halted` | `halt_reason` | `assess_exposure` / `build_answer` |
+| `assess_exposure` | `after_assessment` | `exposure` | `retrieve_guidance` / `build_answer` |
+| `confirm_write` | `after_confirmation` | `write_authorized` | `record_finding` / `build_answer` |
+
+Every selector is pure: no I/O, no mutation. It maps a decision already
+stored in the state onto an outgoing edge label - the node above concluded,
+and the selector reads that conclusion back. The last one uses `is True`
+rather than a truth test, for the reason under **What the port broke**.
+
+### How to run it
+
+**No API key is needed**: every answer these goals produce is committed.
+
+    uv run python scripts/langgraph_flow.py -g "Does CVE-2025-68664 affect us?"
+    uv run python scripts/langgraph_flow.py -g "..." --confirm
+    uv run python scripts/langgraph_flow.py -g "..." --json
+    uv run python scripts/langgraph_flow.py --graph
+
+Regenerate the report:
+
+    uv run python scripts/run_langgraph_examples.py
+
+The cached commands above need no external service. `--png` calls
+`mermaid.ink` to render the diagram; `--live` ignores the caches and calls
+NVD and the configured model provider.
+
+### Results
+
+Seven scenarios, both implementations, executed for
+`outputs/langgraph_examples.md`:
+
+| Goal | Confirmed | Route | Exposure | HW6 steps of 8 | HW7 nodes of 12 | Wrote |
+|---|---|---|---|---|---|---|
+| CVE-2025-68664 | yes | triage | exposed | 8 | 10 | yes |
+| CVE-2025-68664 | no | triage | exposed | 7 | 9 | no |
+| CVE-2025-67644 | no | triage | patched | 3 | 5 | no |
+| CVE-2024-5565 | no | triage | not_affected | 3 | 5 | no |
+| CVE-2023-99999 | no | triage | — | 1 | 3 | no |
+| "How do I prevent prompt injection?" | no | guidance | — | 1 | 3 | no |
+| "Are we affected by that LangChain bug?" | no | clarification | — | 1 | 3 | no |
+
+The graph adds a classification node before the HW6 sequence and an
+answer-composition node after it, which is the constant two.
+`test_both_implementations_answer_one_goal_identically`, parametrized over
+all seven scenarios, asserts that both produce the same route, the same
+exposure and the same final answer.
+
+### Custom flow vs LangGraph
+
+| Aspect | HW6, imperative | HW7, graph |
+|---|---|---|
+| where the order lives | `run_triage`, eight calls | `build_graph`, nineteen edges |
+| branch points | five decisions, in `run` and `run_triage` | five declarations, eleven dotted edges |
+| the state | one Pydantic object, mutated in place | a TypedDict, merged from partial updates |
+| the trace | `add_step`, called by hand in every step | a reducer, plus per-node updates from the runtime |
+| which fields a step wrote | not recorded anywhere | reported by the runtime, printed in the report |
+| does a step branch? | three of the five say so in a return type; the rest are ifs in run and run_triage | every branch is a conditional edge in build_graph |
+| convergence | invisible in the code | seven edges into one node |
+| the diagram | drawn by hand in this README | generated from the compiled graph |
+| wiring mistakes | ordinary Python errors | three classes refused by `compile()` |
+| debugging a run | print the state at the end | the runtime reports each node's update; the CLI collects and prints them |
+| dependencies added for orchestration | none | `langgraph`, adding nineteen lockfile packages |
+| flow + state | 507 lines | 747 lines |
+| pause at the gate and resume | not implemented; would need its own persistence | `interrupt()` with a checkpointer and a stable thread id; not implemented here |
+
+**What got better.** Branch points became countable, convergence became
+visible, and field-level tracing stopped depending on every step
+remembering to append to it. Notes, requests and observations still come
+from the node. The diagram is the largest single win: its topology is read out of the
+compiled graph rather than drawn from memory, unlike the hand-made ones in
+the HW6 section. It still has to be regenerated into this file to stay
+current.
+
+**What got harder.** Fifty percent more code in the orchestration, about a
+sixth of which exists only because the state became a dict and needs an
+adapter back. A signature no longer tells you whether a step is a branch.
+Nineteen packages arrived for one direct dependency; application code uses
+LangGraph itself and one type, `Edge`, from the transitive `langchain-core`.
+
+**Was it worth it at this size?** For three routes, eight steps, no
+parallel branches and no cycles - barely. The declarative branches and the
+reducer are conveniences; both were five-line problems HW6 had already
+solved. What is not replaceable that cheaply is everything that follows
+from the workflow being an object rather than a method: it can be drawn, it
+can be streamed, and it can be validated. Those would matter more on a
+workflow twice this size with more than one author.
+
+Full analysis: `configs/langgraph_conclusions.md`, folded into the report.
+
+### What the port broke
+
+Worth its own heading, because it is the finding this assignment produced.
+
+In HW6 the gate and the branch that used it were one expression:
+`if not self.confirm_write(state): return`. The decision could not be read
+without running the gate.
+
+In the graph they are two pieces of configuration - a node that writes a
+field, and an edge that reads one. The first version of that edge read
+`pending_confirmation`, whose default is `False`, so a graph rewired around
+its gate would have written every time.
+
+**A node that never runs still leaves its field at a default, so a safety
+decision needs a value that means the decision was never made.** That is
+`write_authorized: bool | None`, and it is the difference between an
+orchestration where "did this run?" is a control-flow fact and one where it
+is a data question.
+
+The same reading found something older: both implementations passed
+`confirmed=True` into the write tool unconditionally, so the "two
+independent refusals" HW6 claims were one refusal, written twice. The graph
+reads `write_authorized` into that flag now;
+`test_the_write_node_refuses_a_state_the_gate_never_authorized` calls the
+write node directly, the way a rewiring mistake would, and holds it there.
+
+### Known limitations
+
+- **Two implementations of one workflow.** Deliberate - the comparison is
+  the assignment - but the node bodies duplicate HW6's step bodies, and a
+  change to one has to be made twice. The parity test is what catches it.
+- **Two representations of one state.** `as_agent_state` converts a
+  TypedDict into the Pydantic model the answer composer reads.
+- **The trace is only half free.** The runtime reports which fields each
+  node wrote; the notes, requests and observations still come from the node
+  returning a `NodeRecord`.
+- **`compile()` does not catch an unreachable node, and the diagram hides
+  it.** It refuses an edge into a node that does not exist, but a node
+  nothing routes to compiles and never runs. `graph_diagram.py` draws
+  edges, so such a node does not appear in the picture either. Nothing here
+  asserts that the twelve names in `NodeName` are the twelve the graph
+  registered.
+- **No checkpointer.** The `interrupt()` row in the table above is
+  unimplemented; a run stopped at the gate still restarts from the top, and
+  a node containing `interrupt()` re-runs from its first line on resume, so
+  anything it does before the interrupt would have to be idempotent.
+- **The diagram groups by a hand-named plan.** `graph_diagram.py` boxes
+  `TRIAGE_PLAN`; a node added outside that tuple draws correctly but lands
+  outside the box.
+
+### Layout
+
+    configs/
+      langgraph_scenarios.yaml      # the four examples, and every path
+      langgraph_conclusions.md      # HW7 analysis (source of truth)
+    scripts/
+      langgraph_flow.py             # CLI: one goal, traced
+      run_langgraph_examples.py     # regenerate the report
+    src/genai_security_assistant/
+      models/graph.py               # NodeName, NodeRecord, TriageState
+      orchestration/
+        langgraph_flow.py           # the nodes, the edges, the graph
+        graph_diagram.py            # the graph, drawn to show its forks
+    tests/unit/orchestration/
+      test_langgraph_flow.py        # both implementations, compared
+    outputs/
+      langgraph_examples.md         # generated report (HW7 deliverable)
+
 ## License and attribution
 
 Source documents are © OWASP Foundation, licensed **CC-BY-SA 4.0**. Attribution
