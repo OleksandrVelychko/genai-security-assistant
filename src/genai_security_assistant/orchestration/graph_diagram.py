@@ -1,7 +1,7 @@
 """The graph, drawn so a reader can see where it forks (HW7).
 
 draw_mermaid() renders every node and every edge, and on twelve nodes with
-eleven conditional branches what it renders is a thicket: seven edges reach
+eleven conditional transitions what it renders is a thicket: seven edges reach
 build_answer from seven different depths, and nothing on the page says which
 nodes are the ones that decide.
 
@@ -12,8 +12,10 @@ This draws the same nineteen edges and adds the two things a reader needs:
 
 Neither is written down here. The box is TRIAGE_PLAN, the tuple agent_flow
 already runs in order; the color comes from edge.conditional, which
-LangGraph sets on an edge that came from add_conditional_edges. Move a
-branch or add a node and the picture follows without anyone editing it.
+LangGraph sets on an edge that came from add_conditional_edges. Move a branch or
+reroute an edge and the picture follows on the next run.
+Two things it will not follow: a node no edge reaches is not drawn at all,
+and the grouping is whatever TRIAGE_PLAN and GATE name.
 """
 
 from __future__ import annotations

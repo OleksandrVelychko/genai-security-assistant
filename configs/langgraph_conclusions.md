@@ -25,10 +25,11 @@ representations. Those are the subject of the costs below.
 ## What the framework gave
 
 **Branch points became countable.** The graph declares five conditional
-edges, which render as eleven dotted arrows. In HW6 the same eleven
-decisions were spread across eight methods as `if not observation.success:
-return False` and `if state.exposure != "exposed": return`, and the only
-way to count them was to read every method.
+edges, which render as eleven dotted arrows. HW6 made the same five
+decisions in `run` and `run_triage` - `if not self.lookup_cve(state):
+return`, `if state.exposure != "exposed": return` - with the checks that
+fed them buried inside the step methods. Counting them meant reading both
+levels.
 
 **The trace stopped depending on the author remembering it.** HW6 appended
 to `state.steps` by hand, in every step, through `add_step`. Here the
@@ -102,11 +103,12 @@ representation.
 **Nineteen lockfile packages for one direct dependency.** Adding
 `langgraph 1.2.11` added nineteen packages in total: `langgraph` itself,
 `langchain-core`, `langsmith`, `requests`, `orjson`, `zstandard`,
-`websockets`, and twelve others. Only `langchain_core.runnables.graph.Edge`
-is imported by application code, in `graph_diagram.py`; the rest are
-framework internals. One of them, `langsmith`, is a tracing client that
-stays quiet unless `LANGSMITH_TRACING` is set - a runtime behaviour this
-repository did not have before.
+`websockets`, and twelve others. Beyond LangGraph itself, application code
+imports exactly one symbol from that set: `Edge`, from the transitive
+`langchain-core`, in `graph_diagram.py`. The rest are framework internals.
+One of them, `langsmith`, is a tracing client that stays quiet unless
+`LANGSMITH_TRACING` is set - a runtime behaviour this repository did not
+have before.
 
 **The framework's own diagram did not scale.** `draw_mermaid()` on twelve
 nodes with seven edges into one of them renders a thicket, and

@@ -1,7 +1,9 @@
 """The graph, against the workflow it was ported from.
 
-Every test here runs both implementations and compares them, which is the
-one thing neither file can assert about itself. What the two share - the
+The two parametrized tests run both implementations and compare them, which
+is the one thing neither file can assert about itself. The rest hold the
+graph to its own invariants: the write gate, the shape of the state, and
+what a node leaves in the trace. What the two implementations share - the
 router, the triage rules, the tools, the answer composer - is already
 covered by test_agent_flow.py and test_triage_rules.py, so nothing below
 tests any of it a second time.
@@ -213,7 +215,7 @@ def test_the_write_node_refuses_a_state_the_gate_never_authorized(tmp_path):
 
 
 def test_a_run_that_stops_early_still_comes_back_with_every_field(tmp_path):
-    """What initial_state is for: a halted run has holes, not missing keys."""
+    """What initial_state is for: an early exit has empty values, not missing keys."""
     _, graph = build_both(tmp_path / "findings.jsonl")
 
     state = graph.run(NO_RECORD)
