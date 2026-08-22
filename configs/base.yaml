@@ -21,6 +21,33 @@ paths:
   eval_queries: "configs/eval_queries.yaml"
   retrieval_examples: "outputs/retrieval_examples.md"
   conclusions: "configs/conclusions.md"
+  # HW3
+  query_vectors: "index/query_vectors.npz"
+  retrieval_comparison: "outputs/retrieval_comparison.md"
+  comparison_conclusions: "configs/comparison_conclusions.md"
+  # HW4
+  answers_cache: "index/answers_cache.json"
+  qa_questions: "configs/qa_questions.yaml"
+  rag_answers_examples: "outputs/rag_answers_examples.md"
+  prompt_improvements: "outputs/rag_prompt_improvements.md"
+  answer_conclusions: "configs/answer_conclusions.md"
+  prompt_conclusions: "configs/prompt_conclusions.md"
+  # HW5
+  cve_cache: "index/cve_cache.json"
+  findings: "data/findings.jsonl"
+  tool_questions: "configs/tool_questions.yaml"
+  tool_examples: "outputs/tool_examples.md"
+  tool_conclusions: "configs/tool_conclusions.md"
+  router_decisions: "index/router_decisions.json"
+  # HW6
+  asset_inventory: "configs/asset_inventory.yaml"
+  agent_scenarios: "configs/agent_scenarios.yaml"
+  agent_flow_examples: "outputs/agent_flow_examples.md"
+  agent_conclusions: "configs/agent_conclusions.md"
+  # HW7
+  langgraph_scenarios: "configs/langgraph_scenarios.yaml"
+  langgraph_examples: "outputs/langgraph_examples.md"
+  langgraph_conclusions: "configs/langgraph_conclusions.md"
 
 chunking:
   chunk_size: 700          # target characters (assignment range: 500-1000)
@@ -44,7 +71,87 @@ embeddings:
     model: "sentence-transformers/all-MiniLM-L6-v2"
     batch_size: 32
 
+generation:
+  provider: "openai"
+  openai:
+    model: "gpt-4.1-mini"
+    base_url: "https://api.openai.com/v1"
+    api_key_env: "OPENAI_API_KEY"
+  # 0 asks for the least random answer the API will give. It doesn't make
+  # the answer repeatable - the same call twice can still differ - which is
+  # why answers are cached to disk as well.
+  temperature: 0
+  max_output_tokens: 600
+  prompt_version: "v3"
+  # Read answers from index/answers_cache.json when they are there.
+  # scripts/rag_answer.py --live overrides this for one run.
+  use_cached_answers: true
+  # Fallback, first layer: below this score the LLM is not called at all.
+  #
+  # Measured in the configuration this pipeline runs, over the first eight
+  # questions in configs/qa_questions.yaml:
+  #
+  #   0.1258  sourdough bread          - off-topic, no answer
+  #   0.3199  Kubernetes policies      - security, not this corpus
+  #   0.4799  prompt injection, reworded - has an answer
+  #   0.4899  unbounded consumption    - in domain, no answer
+  #   0.4982  output validation        - has an answer
+  #   0.7003  prompt injection, as written in HW2
+  #
+  # Read the middle of that list. A question with an answer scores 0.4799
+  # and one without scores 0.4899, so the two groups overlap and no
+  # threshold tells them apart. The gate is only good for the far end,
+  # where a question is plainly not about this corpus.
+  #
+  # 0.40 sits halfway between 0.3199 and 0.4799, the two neighbors it has
+  # to separate. 0.45 also works on these eight questions and every
+  # decision below is the same either way; 0.40 just leaves more room
+  # before a reworded question gets stopped by mistake.
+  #
+  # hw4_q9 was added after the threshold was chosen and did not change it:
+  # it scores 0.6786, far above either candidate.
+  #
+  # What the gate can't do, the refusal rule in the prompt does, and
+  # outputs/rag_answers_examples.md shows it doing so on two questions.
+  min_score: 0.40
+
 retrieval:
   top_k: 5
   score_precision: 4
   preview_chars: 300
+  # HW3
+  # How many candidates to fetch before filtering, as a multiple of top_k.
+  # Filtering can only remove what the search already returned, so five
+  # results need more than five candidates. The number affects work, not
+  # correctness: when too few survive, the search widens to the whole index,
+  # so a bad guess costs one extra pass and never a short answer.
+  candidate_multiplier: 4
+  # Sections that hold article titles and URLs rather than content. Matched
+  # by exact name: "2. Reference Security Misconfiguration Best Practices"
+  # contains the word Reference but is real guidance, and a substring match
+  # would throw it away.
+  reference_sections:
+    - "Reference Links"
+    - "References"
+    - "Related Articles"
+    - "Related Frameworks and Taxonomies"
+    # Reciprocal rank fusion adds 1/(rrf_k + position) for each ranking a
+    # chunk appears in. The constant decides how much the very top of each
+    # list outweighs the rest: smaller favors it more. 60 is the value from
+    # the paper the method comes from, kept unchanged - tuning it against
+    # eleven queries would fit noise rather than anything real.
+  rrf_k: 60
+
+tools:
+  # Read answers from index/cve_cache.json when they are there.
+  # scripts/external_tool.py --live overrides this for one run.
+  use_cached_responses: true
+  nvd:
+    base_url: "https://services.nvd.nist.gov/rest/json/cves/2.0"
+    # Optional. NVD allows 5 requests per rolling 30 seconds without a key
+    # and 50 with one: https://nvd.nist.gov/developers/start-here
+    api_key_env: "NVD_API_KEY"
+    timeout_seconds: 20
+    # NIST asks callers to sleep between requests rather than burst. Six
+    # seconds keeps a keyless run inside the limit without tracking a window.
+    min_interval_seconds: 6

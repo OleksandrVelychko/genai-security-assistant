@@ -6,7 +6,6 @@ The index only knows row numbers.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import faiss
@@ -34,7 +33,7 @@ class FaissVectorStore:
         self.meta = meta
 
     @classmethod
-    def build(cls, vectors: np.ndarray, meta: IndexMeta) -> "FaissVectorStore":
+    def build(cls, vectors: np.ndarray, meta: IndexMeta) -> FaissVectorStore:
         """Normalize the vectors and load them into a flat inner-product index."""
         if vectors.ndim != 2:
             raise ValueError(f"Expected a 2D array, got shape {vectors.shape}.")
@@ -64,7 +63,7 @@ class FaissVectorStore:
         )
 
     @classmethod
-    def load(cls, index_path: Path, meta_path: Path) -> "FaissVectorStore":
+    def load(cls, index_path: Path, meta_path: Path) -> FaissVectorStore:
         """Read an index built by a previous run."""
         for path in (index_path, meta_path):
             if not path.exists():

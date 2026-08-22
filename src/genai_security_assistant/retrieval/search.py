@@ -5,14 +5,38 @@ then answer queries by encoding them and mapping FAISS rows back to chunks.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import Protocol
+
 from genai_security_assistant.config import Settings
+from genai_security_assistant.models.documents import Chunk
 from genai_security_assistant.models.retrieval import RetrievedChunk
 from genai_security_assistant.retrieval.embeddings import (
     EmbeddingProvider,
     build_embedding_provider,
 )
 from genai_security_assistant.retrieval.indexing import load_chunks
+from genai_security_assistant.retrieval.query_cache import CachedQueryEmbedder
 from genai_security_assistant.retrieval.vector_store import FaissVectorStore
+
+
+class BaseRetriever(Protocol):
+    """What this file needs from the pipeline it wraps.
+    A protocol rather than SemanticRetriever itself, for the same reason
+    embeddings.py declares one: it names the three things actually used, so
+    a test can supply a stand-in without an index and an embedding model
+    behind it.
+    """
+
+    @property
+    def default_top_k(self) -> int: ...
+
+    @property
+    def chunks(self) -> Sequence[Chunk]: ...
+
+    def search(
+        self, query: str, top_k: int | None = None
+    ) -> list[RetrievedChunk]: ...
 
 
 class SemanticRetriever:
@@ -34,7 +58,7 @@ class SemanticRetriever:
         self.default_top_k = default_top_k
 
     @classmethod
-    def from_settings(cls, settings: Settings | None = None) -> "SemanticRetriever":
+    def from_settings(cls, settings: Settings | None = None) -> SemanticRetriever:
         """Build a retriever from configs/base.yaml and the saved index."""
         settings = settings or Settings()
 
@@ -50,7 +74,14 @@ class SemanticRetriever:
             model=embedding_config["model"],
         )
 
-        provider = build_embedding_provider(embedding_config)
+        # Query vectors come from a committed file instead of the API, so
+        # that two runs of the same code produce the same numbers. See
+        # query_cache.py for what went wrong without it.
+        provider = CachedQueryEmbedder(
+            path=settings.path("query_vectors"),
+            model=embedding_config["model"],
+            build_provider=lambda: build_embedding_provider(embedding_config),
+        )
         chunks = load_chunks(settings.path("index_chunks"))
 
         if len(chunks) != store.meta.chunks_count:

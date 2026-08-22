@@ -1,0 +1,104 @@
+# Examples for outputs/agent_flow_examples.md.
+#
+# Prose is written by hand; every route, call, observation, state and
+# answer is filled in by scripts/run_agent_flow_examples.py from a real
+# run. An example with confirm: true executes a write.
+
+examples:
+  - id: a1
+    goal: "Does CVE-2025-68664 affect us?"
+    confirm: true
+    why: |
+      The whole workflow, and the reason it has to be one.
+
+      Neither source can answer this alone. NVD holds the flaw and knows
+      nothing about this organization; the six OWASP documents hold the
+      class of risk and know nothing about either. The answer exists only
+      where the two meet, and reaching it takes four calls whose order is
+      fixed by what the one before returned.
+
+      The step that matters is the third. It calls nothing. It reads the
+      record from step one and the deployment rows from step two, concludes
+      `exposed`, and every step after it runs because of that one word.
+
+  - id: a2
+    goal: "Does CVE-2025-68664 affect us?"
+    confirm: false
+    why: |
+      The same goal, one flag different.
+
+      Seven of the eight steps run exactly as above. The finding is
+      drafted, the owner is identified, and then `confirm_write` refuses
+      because no human said yes. Nothing reaches `data/findings.jsonl`.
+
+      This is the control HW5 built at the tool layer, working one level
+      up. `BaseTool.run` refuses an unconfirmed write; here the workflow
+      never proposes one. Two independent refusals for a single action is
+      deliberate: a workflow that forgot its gate would still be stopped
+      by the tool.
+
+  - id: a3
+    goal: "Does CVE-2025-67644 affect us?"
+    confirm: false
+    why: |
+      The run that stops early, and what stopping early saves.
+
+      This CVE reaches one deployed service, and that service already runs
+      3.0.1 - the version the fix landed in. The assessment concludes
+      `patched`, and the five steps after it never run, including
+      `retrieve_guidance`, the only step in the workflow that calls a
+      model.
+
+      The plan still lists eight steps. Completed lists three. That gap is
+      what the assignment is about: what runs is decided by state, not by
+      the plan.
+
+  - id: a4
+    goal: "How do I prevent prompt injection?"
+    confirm: false
+    why: |
+      The route that was already finished before HW6 started.
+
+      No identifier, and no claim about this deployment: the goal asks
+      about a class of risk, which is precisely what six OWASP documents
+      answer. The router hands it to `RAGAnswerer` untouched, and what
+      comes back is the HW4 answer, citations and all.
+
+      Worth stating plainly, because it is the argument for having a
+      router at all: the agent layer adds nothing here. A workflow that
+      ran triage steps on this goal would call two tools with nothing to
+      contribute and produce a worse answer more slowly.
+
+  - id: a5
+    goal: "Are we affected by that LangChain bug?"
+    confirm: false
+    why: |
+      The gap HW5 wrote down and could not fill.
+
+      Its README lists it as a known limitation: "A request missing
+      required fields needs a clarifying question, not a different route.
+      The orchestration layer has no way to ask one."
+
+      This goal is clear English and nothing the assistant has can answer
+      it. The corpus holds no deployment facts. Triage needs an identifier
+      and there is none. Retrieval would answer about LangChain in
+      general, which is not what was asked. Asking back is the only
+      correct move, and it is now a route rather than a missing case.
+
+# Every outcome the workflow can reach, executed for the summary table.
+# The five examples cover three of them; the other two are here.
+paths:
+  - goal: "Does CVE-2025-68664 affect us?"
+    confirm: true
+  - goal: "Does CVE-2025-68664 affect us?"
+    confirm: false
+  - goal: "Does CVE-2025-67644 affect us?"
+    confirm: false
+  - goal: "Does CVE-2024-5565 affect us?"
+    confirm: false
+  - goal: "Does CVE-2023-99999 affect us?"
+    confirm: false
+  - goal: "How do I prevent prompt injection?"
+    confirm: false
+  - goal: "Are we affected by that LangChain bug?"
+    confirm: false
