@@ -24,10 +24,11 @@ the previous request from six seconds, node by node, in
 outputs/eval_traces_live.jsonl.
 
 Two things follow, and neither is about our code. A maximum is a weak
-statistic here: the slowest case has changed between every pair of runs so
-far, on one slow call. And timeout_seconds is 20 while a request has come
-back at about 19, so a slower answer turns a case that reports a CVE into
-one that reports upstream_error, taking its verdict with it.
+statistic here: it names whichever case met the slowest call, and both
+which case that is and how slow it was have moved between runs. And
+timeout_seconds is 20 while a request has come back at about 19, so a
+slower answer turns a case that reports a CVE into one that reports
+upstream_error, taking its verdict with it.
 
 An API key is worth setting, and it fixes the half we own rather than the
 half we do not: nvd_client sets the interval to zero outright when a key
