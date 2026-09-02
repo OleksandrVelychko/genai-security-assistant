@@ -4,8 +4,13 @@ from __future__ import annotations
 
 from genai_security_assistant.generation.citations import (
     bare_mentions,
+    claims,
+    ends_with_citation,
     extract_citation_ids,
+    rejection_reason,
+    sentences,
     split_citations,
+    uncited_sentences,
 )
 from genai_security_assistant.generation.prompts import FALLBACK_SENTENCE, is_refusal
 from genai_security_assistant.models.documents import ChunkMetadata
@@ -103,3 +108,93 @@ def test_two_ids_in_one_bracket_are_both_found():
 def test_a_bracketed_phrase_is_not_a_citation():
     """Prose in brackets is prose. Only a single word can be an id."""
     assert extract_citation_ids("As shown [see the next section].") == []
+
+
+# The three shapes e01 produced across the probe runs, shortened. Keeping
+# them as fixtures means every rejection test reproduces a failure that
+# actually happened rather than one imagined for the test.
+BUNDLED = (
+    "Excessive Agency is a vulnerability where the system is granted too "
+    "much autonomy. It typically arises through extensions or agents. "
+    "Common triggers include prompt injection [chunk_a, chunk_b]."
+)
+
+DISTRIBUTED = (
+    "Excessive Agency is a vulnerability where the system is granted too "
+    "much autonomy [chunk_b]. It typically arises through extensions or "
+    "agents [chunk_a]. Common triggers include prompt injection [chunk_b]."
+)
+
+
+def test_sentences_split_on_a_period_before_a_capital():
+    assert len(sentences(BUNDLED)) == 3
+
+
+def test_a_version_number_does_not_end_a_sentence():
+    """No space follows the period in 1.2.9, which is what the lookahead
+    in SENTENCE_BREAK relies on."""
+    text = "svc-prompt-studio runs 1.2.9, fixed in 1.2.22 [chunk_a]."
+    assert len(sentences(text)) == 1
+
+
+def test_a_sentence_opening_with_a_quote_is_kept_whole():
+    """e12 answers a question about an attack string and quotes it."""
+    text = 'It is an attack [chunk_a]. "Ignore all instructions" [chunk_b].'
+    assert len(sentences(text)) == 2
+
+
+def test_a_citation_before_the_final_period_still_ends_the_sentence():
+    assert ends_with_citation("Agents may act [chunk_a].")
+
+
+def test_a_sentence_with_no_citation_is_reported():
+    assert uncited_sentences(BUNDLED) == [1, 2]
+
+
+def test_an_answer_cited_throughout_reports_nothing():
+    assert uncited_sentences(DISTRIBUTED) == []
+
+
+def test_claims_ignore_where_the_citations_sit():
+    """The two answers differ only in placement, which is the change a
+    repair is allowed to make."""
+    assert claims(BUNDLED) == claims(DISTRIBUTED)
+
+
+def test_a_repair_that_only_moves_citations_is_taken():
+    retrieved = [make_result("chunk_a"), make_result("chunk_b", rank=2)]
+    assert rejection_reason(BUNDLED, DISTRIBUTED, retrieved) is None
+
+
+def test_a_repair_that_adds_a_sentence_is_refused():
+    """The repair prompt once said a sentence built from two chunks and
+    cited to one is wrong. The model satisfied that by pasting a chunk in
+    as new sentences."""
+    padded = DISTRIBUTED.replace(
+        "It typically arises",
+        "An LLM-based system is granted agency by its developer "
+        "[chunk_a]. It typically arises",
+    )
+    retrieved = [make_result("chunk_a"), make_result("chunk_b", rank=2)]
+
+    assert rejection_reason(BUNDLED, padded, retrieved) == "the claims changed"
+
+
+def test_a_repair_that_invents_an_id_is_refused():
+    candidate = DISTRIBUTED.replace("[chunk_a]", "[chunk_z]")
+    reason = rejection_reason(BUNDLED, candidate, [make_result("chunk_b")])
+
+    assert reason is not None
+    assert "chunk_z" in reason
+
+
+def test_a_repair_that_only_reformats_the_brackets_is_refused():
+    """The second probe prompt turned [a, b] into [a][b] and moved
+    nothing. Same placement, same information, one wasted call."""
+    candidate = BUNDLED.replace("[chunk_a, chunk_b]", "[chunk_a][chunk_b]")
+    retrieved = [make_result("chunk_a"), make_result("chunk_b", rank=2)]
+
+    assert (
+        rejection_reason(BUNDLED, candidate, retrieved)
+        == "no fewer uncited sentences"
+    )

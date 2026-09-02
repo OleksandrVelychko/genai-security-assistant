@@ -1,8 +1,13 @@
-"""Reading the sources out of an answer, and checking they are real.
-Prompt v3 asks for [chunk_id] in square brackets. That format exists so
-this file can check it. A citation written in prose - "according to the
-prompt injection document" - reads fine and can't be verified against
-anything.
+"""Reading the sources out of an answer, and checking them.
+Prompt v3 asks for [chunk_id] in square brackets after the sentence that
+used it. That format exists so this file can check it, and there are two
+things to check: whether an id resolves to a chunk the answer was given,
+and whether it sits on the sentence it supports. A citation written in
+prose - "according to the prompt injection document" - fails both and
+can't be verified against anything.
+
+rejection_reason() judges a repair rather than an answer: it decides
+whether a second model call is allowed to replace the first.
 """
 
 from __future__ import annotations
@@ -17,6 +22,17 @@ from genai_security_assistant.models.retrieval import RetrievedChunk
 # pair, separated by a comma, and the earlier pattern required no spaces
 # inside the brackets, so that whole citation vanished without a trace.
 CITATION_PATTERN = re.compile(r"\[([^\[\]]+)\]")
+# Sentence boundaries, without a sentence splitter in the dependency
+# tree. Terminal punctuation, whitespace, then an opening character:
+# "1.2.9" and "nvd@nist.gov" keep their periods because no space follows
+# them. An abbreviation before a capitalised word - "U.S. Government" -
+# would split, and none appears in this corpus.
+SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+(?=[A-Z(\"'\[])")
+
+# One citation with the space in front of it, so that removing it leaves
+# "approved." rather than "approved ." and two answers differing only in
+# where the citations sit compare equal.
+CITATION_MARKER = re.compile(r"\s*\[[^\[\]]+\]")
 
 
 def extract_citation_ids(answer_text: str) -> list[str]:
@@ -74,3 +90,69 @@ def bare_mentions(
         for chunk in retrieved
         if chunk.chunk_id in answer_text and chunk.chunk_id not in bracketed
     ]
+
+
+def sentences(answer_text: str) -> list[str]:
+    """Split an answer into sentences, one per returned string."""
+    parts = SENTENCE_BREAK.split(answer_text.strip())
+    return [part.strip() for part in parts if part.strip()]
+
+
+def ends_with_citation(sentence: str) -> bool:
+    """Say whether a sentence closes with a bracketed citation.
+    Trailing punctuation is stripped first: the model writes
+    "...from an LLM [chunk_003]." with the period outside the bracket,
+    and that is the format prompt v3 asks for.
+    """
+    return sentence.rstrip().rstrip(".!?\"')").endswith("]")
+
+
+def uncited_sentences(answer_text: str) -> list[int]:
+    """Positions of the sentences that do not end with a citation.
+    Positions rather than a count, so a report can name the sentence
+    instead of only saying how many were wrong.
+    """
+    return [
+        number
+        for number, sentence in enumerate(sentences(answer_text), start=1)
+        if not ends_with_citation(sentence)
+    ]
+
+
+def claims(answer_text: str) -> list[str]:
+    """The sentences of an answer with every citation removed.
+    This is what a citation repair must leave untouched. Comparing the
+    rendered text instead would fail on the one change a repair is
+    allowed to make.
+    """
+    return [
+        " ".join(CITATION_MARKER.sub("", sentence).split())
+        for sentence in sentences(answer_text)
+    ]
+
+
+def rejection_reason(
+    original: str,
+    candidate: str,
+    retrieved: Sequence[RetrievedChunk],
+) -> str | None:
+    """Why a repair must not replace the answer, or None to take it.
+    Three ways a repair fails, one per check, and each was produced by a
+    real run: it rewrote the answer instead of the brackets, it cited an
+    id nobody supplied, or it reformatted the citations without moving
+    any of them onto a sentence.
+    """
+    if claims(candidate) != claims(original):
+        return "the claims changed"
+
+    _, invented = split_citations(candidate, retrieved)
+    if invented:
+        return f"invented ids: {', '.join(invented)}"
+
+    # Not "any uncited remain": a repair that fixes two of three
+    # sentences is still worth taking, and citation_placement records
+    # that the result is repaired rather than clean.
+    if len(uncited_sentences(candidate)) >= len(uncited_sentences(original)):
+        return "no fewer uncited sentences"
+
+    return None
