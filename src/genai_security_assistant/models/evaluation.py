@@ -22,7 +22,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, computed_field
 
 from genai_security_assistant.models.agent import AgentRoute
-from genai_security_assistant.models.generation import AnswerStatus
+from genai_security_assistant.models.generation import AnswerStatus, CitationPlacement
 from genai_security_assistant.models.graph import NodeName
 from genai_security_assistant.models.tools import ToolErrorCode
 
@@ -183,6 +183,15 @@ class EvalResult(BaseModel):
     groundedness_auto: Groundedness
     detected_errors: list[EvalError] = Field(default_factory=list)
 
+    # What the citation guardrail did to the guidance answer. None where
+    # no answerer ran, the same as status. The two counts are equal
+    # wherever no repair was taken, which is what makes them readable as
+    # a pair on every row and not only on the repaired ones.
+    citation_placement: CitationPlacement | None = None
+    uncited_before: int | None = None
+    uncited_after: int | None = None
+    repair_note: str | None = None
+
     @computed_field
     @property
     def groundedness(self) -> Groundedness:
@@ -233,6 +242,12 @@ class EvalSummary(BaseModel):
 
     # Over every case, which is the assignment's formula.
     groundedness_good_rate: float
+    # Answers whose every sentence ends with its own citation, over the
+    # cases that had citations to place at all. An abstention places
+    # nothing, and counting it would move the rate by refusing more
+    # questions rather than by citing better.
+    placed_cases: int = Field(ge=0)
+    citation_compliance_rate: float | None = None
     # The same count over the cases where groundedness applies at all. A
     # set that is a third tool calls cannot score above the share that
     # retrieved anything, and the headline rate alone hides that.

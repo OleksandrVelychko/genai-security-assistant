@@ -64,6 +64,10 @@ EXTRA_COLUMNS: tuple[str, ...] = (
     "node_ms",
     "overhead_ms",
     "run_mode",
+    "citation_placement",
+    "uncited_before",
+    "uncited_after",
+    "repair_note",
 )
 
 
@@ -126,6 +130,12 @@ def csv_row(result: EvalResult) -> dict[str, Any]:
         "node_ms": result.node_ms,
         "overhead_ms": result.overhead_ms,
         "run_mode": result.run_mode,
+        "citation_placement": result.citation_placement or "",
+        "uncited_before": ""
+        if result.uncited_before is None
+        else result.uncited_before,
+        "uncited_after": "" if result.uncited_after is None else result.uncited_after,
+        "repair_note": result.repair_note or "",
     }
 
 
@@ -282,6 +292,9 @@ def write_summary_md(
         f"| failure_rate | {_percent(summary.failure_rate)} |",
         f"| groundedness_good_rate | {_percent(summary.groundedness_good_rate)} |",
         f"| groundedness_good_rate, where it applies | "
+        f"| citation_compliance_rate | "
+        f"{_percent(summary.citation_compliance_rate)} "
+        f"({summary.placed_cases} answers with citations to place) |",
         f"{_percent(summary.groundedness_good_rate_applicable)} "
         f"({summary.applicable_cases} cases) |",
         f"| average_latency_ms | {summary.average_latency_ms} |",
@@ -293,6 +306,12 @@ def write_summary_md(
         "A case with no retrieval behind it cannot be grounded in anything,",
         "so the first groundedness rate is bounded by how much of the set",
         "asks the corpus at all. The second one is over those cases only.",
+        "",
+        "groundedness_good_rate asks whether a citation resolves to a chunk",
+        "the answer was given. citation_compliance_rate asks whether it sits",
+        "on the sentence it supports. The first read 100% on a run where most",
+        "answers bundled every citation at the end of the paragraph, which is",
+        "the gap this column exists to close.",
         "",
         "## top_error_types",
         "",

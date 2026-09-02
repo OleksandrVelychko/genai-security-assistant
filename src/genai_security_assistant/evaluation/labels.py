@@ -139,4 +139,12 @@ def to_result(
         from_cache=not reached_network(run),
         groundedness_auto=groundedness_of(guidance),
         detected_errors=detect_errors(case, state, mode),
+        citation_placement=(
+            guidance.citation_placement if guidance is not None else None
+        ),
+        uncited_before=(
+            guidance.uncited_before_repair if guidance is not None else None
+        ),
+        uncited_after=guidance.uncited_count if guidance is not None else None,
+        repair_note=guidance.repair_note if guidance is not None else None,
     )

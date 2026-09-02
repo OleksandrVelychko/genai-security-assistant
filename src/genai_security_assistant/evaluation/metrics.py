@@ -122,6 +122,15 @@ def summarize(results: list[EvalResult]) -> EvalSummary:
     applicable = [
         result for result in results if result.groundedness != "not_applicable"
     ]
+    # Only where citations had somewhere to go. A clarification run has
+    # no answer and an abstention makes no claim, and both would count as
+    # compliant for having nothing to get wrong.
+    placed = [
+        result
+        for result in results
+        if result.citation_placement not in (None, "not_applicable")
+    ]
+    cited = sum(1 for result in placed if result.uncited_after == 0)
     good = sum(1 for result in results if result.groundedness == "good")
 
     latencies = [result.latency_ms for result in results]
@@ -142,4 +151,6 @@ def summarize(results: list[EvalResult]) -> EvalSummary:
         max_latency_ms=max(latencies),
         slowest_case=slowest.case.id,
         error_counts=error_counts(results),
+        placed_cases=len(placed),
+        citation_compliance_rate=_share(cited, len(placed)),
     )
