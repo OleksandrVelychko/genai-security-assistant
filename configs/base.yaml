@@ -48,6 +48,18 @@ paths:
   langgraph_scenarios: "configs/langgraph_scenarios.yaml"
   langgraph_examples: "outputs/langgraph_examples.md"
   langgraph_conclusions: "configs/langgraph_conclusions.md"
+  # HW8
+  eval_cases: "configs/eval_cases.yaml"
+  eval_conclusions: "configs/eval_conclusions.md"
+  eval_results_csv: "outputs/eval_results.csv"
+  eval_results_md: "outputs/eval_results.md"
+  eval_summary: "outputs/eval_summary.md"
+  quality_report: "outputs/quality_report.md"
+  # One file per run mode, each rewritten whole by the run that produced
+  # it. One file with a run_mode column would need merge logic to keep the
+  # other mode's rows, and merge logic is what fails without saying so.
+  eval_traces_live: "outputs/eval_traces_live.jsonl"
+  eval_traces_cached: "outputs/eval_traces_cached.jsonl"
 
 chunking:
   chunk_size: 700          # target characters (assignment range: 500-1000)
