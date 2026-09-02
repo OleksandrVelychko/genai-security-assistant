@@ -5,9 +5,10 @@
 # configs/qa_questions.yaml: `note` is written first and never edited,
 # `comment` is written afterwards and printed as it stands.
 #
-# Order matters on a fresh checkout. Some of these questions have a frozen
-# query vector and no stored answer, so the first run calls the API whether
-# or not --live is passed:
+# The answers these questions produce are in index/answers_cache.json, so a
+# default run replays them and needs no API key. That was not true when the
+# set was written: five questions had a frozen query vector and no stored
+# answer, and the first run fetched them.
 #   uv run python scripts/run_eval.py --live   # calls OpenAI and NVD
 #   uv run python scripts/run_eval.py          # replays index/*.json
 #
@@ -105,7 +106,8 @@ cases:
       eval_queries.yaml grades seven governance pages as the answer. The
       other four are "Page 9", a generic LLM02 opening and two LLM06
       mitigation sections belonging to a different question. Accurate for
-      what it saw, thin against what the corpus holds.
+      what it saw, thin against what the corpus holds. The failure is not
+      e02's: the right document was found, and only one page of it.
 
   # --- nothing to answer with -------------------------------------------
   - id: e04_offtopic_sourdough
@@ -238,8 +240,8 @@ cases:
     expected_route: triage
     expected_mode: fallback
     expected_behavior: >
-      Say the identifier is not registered, rather than that nothing is
-      known about it.
+      Report that NVD returned no record for the identifier, without
+      claiming that nothing is known about it.
     note: >
       A well-formed identifier that does not exist. NVD answers with an
       empty result, so lookup_cve halts the run at the first node and the
@@ -248,11 +250,18 @@ cases:
     answer_quality: good
     comment: >
       NVD answered with an empty result and the run said "NVD holds no
-      record", which is the distinction this case exists for: not
-      registered rather than not known. The tool_error on this row is the
-      point of the case and not a defect. Slowest case of the run while
-      executing three nodes, because e09 before it made no model call and
-      left the whole six-second interval to wait out.
+      record", which is the distinction this case exists for. The
+      tool_error on this row is the point of the case and not a defect.
+      Slowest case of the run while executing three nodes, because e09
+      before it made no model call and left the whole six-second interval
+      to wait out.
+
+      The expectation was corrected after this run. It read "say the
+      identifier is not registered", which NVD alone cannot establish:
+      the CVE Program and NVD are separate systems, and an identifier can
+      exist in one and not the other. The wording the run produced was
+      already the narrower one, so no verdict moved - the yardstick was
+      wrong, not the result.
 
   # --- neither the corpus nor a record ----------------------------------
   - id: e11_ambiguous_component
