@@ -292,11 +292,11 @@ def write_summary_md(
         f"| failure_rate | {_percent(summary.failure_rate)} |",
         f"| groundedness_good_rate | {_percent(summary.groundedness_good_rate)} |",
         f"| groundedness_good_rate, where it applies | "
+        f"{_percent(summary.groundedness_good_rate_applicable)} "
+        f"({summary.applicable_cases} cases) |",
         f"| citation_compliance_rate | "
         f"{_percent(summary.citation_compliance_rate)} "
         f"({summary.placed_cases} answers with citations to place) |",
-        f"{_percent(summary.groundedness_good_rate_applicable)} "
-        f"({summary.applicable_cases} cases) |",
         f"| average_latency_ms | {summary.average_latency_ms} |",
         f"| median_latency_ms | {summary.median_latency_ms} |",
         f"| max_latency_ms | {summary.max_latency_ms} (`{summary.slowest_case}`) |",
@@ -309,9 +309,9 @@ def write_summary_md(
         "",
         "groundedness_good_rate asks whether a citation resolves to a chunk",
         "the answer was given. citation_compliance_rate asks whether it sits",
-        "on the sentence it supports. The first read 100% on a run where most",
-        "answers bundled every citation at the end of the paragraph, which is",
-        "the gap this column exists to close.",
+        "at the end of the sentence that used it. The first read 100% on a",
+        "run where most answers bundled every citation at the end of the",
+        "paragraph instead, which is the gap this column exists to close.",
         "",
         "## top_error_types",
         "",

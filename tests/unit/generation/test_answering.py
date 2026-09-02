@@ -214,3 +214,25 @@ def test_a_repaired_answer_records_the_count_it_started_from():
 
     assert answer.uncited_before_repair == 1
     assert answer.uncited_count == 0
+
+
+class FailingRepairChat(ScriptedChat):
+    """Answers once, then fails the way a second call can."""
+
+    def complete(self, system: str, user: str) -> str:
+        if self.calls:
+            self.calls.append((system, user))
+            raise RuntimeError("upstream said no")
+        return super().complete(system, user)
+
+
+def test_a_repair_that_raises_does_not_take_the_answer_with_it():
+    """The answer is correct and the repair is cosmetic. A failed second
+    call must cost the citations, never the answer."""
+    chat = FailingRepairChat(BUNDLED)
+    answer = build(chat).answer("why")
+
+    assert answer.answer_text == BUNDLED
+    assert answer.status == "answered"
+    assert answer.citation_placement == "unrepaired"
+    assert answer.repair_note == "the repair call failed: RuntimeError"

@@ -49,8 +49,10 @@ maximum is the least likely thing anyone re-examines.
 - **`models/generation.py`** - `CitationPlacement`, plus
   `citation_placement`, `generation_attempts`, `repair_note`,
   `uncited_count` and `uncited_before_repair` on `GroundedAnswer`.
-- **evaluation layer** - four columns in `outputs/eval_results.csv` and a
-  `citation_compliance_rate` metric beside `groundedness_good_rate`.
+- **evaluation layer** - four columns in the eval schema and the report
+  generator, and a `citation_compliance_rate` metric beside
+  `groundedness_good_rate`. The committed `outputs/eval_results.csv`
+  predates them; see limitation 7.
 - **`scripts/run_citation_comparison.py`** - answers every guidance case
   twice and writes `outputs/citation_comparison.md`.
 - **`configs/base.yaml`** - `repair_citations`, and `--no-repair` on
@@ -223,15 +225,20 @@ contract, is left alone at the cost of no second call.
    eight sentences come from tool output and have no chunk to cite.
    Auditing the finished text would report seven violations against a
    correct run.
-6. **`orchestration/pipeline.py` is out of scope.** The HW5 tool route
+6. **A repair that fails is a repair that did not happen.** The second
+   call is wrapped: transport errors, rate limits and unparseable bodies
+   all end with the first answer shipping and `repair_note` saying which.
+   The catch is deliberately broad, because an unlisted exception losing a
+   correct answer is the one failure this layer exists to prevent.
+7. **`orchestration/pipeline.py` is out of scope.** The HW5 tool route
    answers from a tool observation and carries no chunk citations, so the
    guardrail neither runs there nor should.
-7. **`outputs/eval_results.md` still describes the system as HW8 submitted
+8. **`outputs/eval_results.md` still describes the system as HW8 submitted
    it.** Regenerating it with `--live` would rewrite six cached answers and
    invalidate the hand-written judgements in `configs/eval_cases.yaml`. The
    new columns and `citation_compliance_rate` are in the code and appear
    the next time that report is regenerated deliberately.
-8. **Cost.** A non-compliant answer costs a second model call, and a
+9. **Cost.** A non-compliant answer costs a second model call, and a
    refused repair costs it for nothing. The budget is one attempt, fixed in
    code rather than configurable, because an unbounded repair loop is a
    worse failure than a bundled citation.

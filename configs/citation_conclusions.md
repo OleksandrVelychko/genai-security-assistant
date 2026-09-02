@@ -65,8 +65,10 @@ looks like when the model behaves, not evidence that it always will.
 
 `retrieve_guidance` calls the same pipeline, so the triage cases `e07` and
 `e08` are placed as well. Their questions are built from a CVE record at
-run time and this script has no record to build one from, so they are
-covered by `outputs/eval_results.md` instead.
+run time and this script has no record to build one from, so neither has
+been measured since the guardrail was added. They take the code path this
+table describes; what they now produce is not written down anywhere.
+`outputs/eval_results.md` predates the change and shows the old answers.
 
 Their composed answers are also why the check runs inside `RAGAnswerer`
 rather than on the finished text. Four of the eight sentences in `e07` come

@@ -125,6 +125,10 @@ DISTRIBUTED = (
     "agents [chunk_a]. Common triggers include prompt injection [chunk_b]."
 )
 
+# The ids these fixtures were given. A bracket holding anything else is
+# prose, and the checks below have to tell the two apart.
+KNOWN = {"chunk_a", "chunk_b"}
+
 
 def test_sentences_split_on_a_period_before_a_capital():
     assert len(sentences(BUNDLED)) == 3
@@ -144,21 +148,21 @@ def test_a_sentence_opening_with_a_quote_is_kept_whole():
 
 
 def test_a_citation_before_the_final_period_still_ends_the_sentence():
-    assert ends_with_citation("Agents may act [chunk_a].")
+    assert ends_with_citation("Agents may act [chunk_a].", KNOWN)
 
 
 def test_a_sentence_with_no_citation_is_reported():
-    assert uncited_sentences(BUNDLED) == [1, 2]
+    assert uncited_sentences(BUNDLED, KNOWN) == [1, 2]
 
 
 def test_an_answer_cited_throughout_reports_nothing():
-    assert uncited_sentences(DISTRIBUTED) == []
+    assert uncited_sentences(DISTRIBUTED, KNOWN) == []
 
 
 def test_claims_ignore_where_the_citations_sit():
     """The two answers differ only in placement, which is the change a
     repair is allowed to make."""
-    assert claims(BUNDLED) == claims(DISTRIBUTED)
+    assert claims(BUNDLED, KNOWN) == claims(DISTRIBUTED, KNOWN)
 
 
 def test_a_repair_that_only_moves_citations_is_taken():
@@ -198,3 +202,24 @@ def test_a_repair_that_only_reformats_the_brackets_is_refused():
         rejection_reason(BUNDLED, candidate, retrieved)
         == "no fewer uncited sentences"
     )
+
+
+def test_prose_in_brackets_is_not_a_citation():
+    """A sentence ending "[above]" cites nothing, and counting it would
+    report a claim as sourced when no chunk sourced it."""
+    assert not ends_with_citation("See details [above].", KNOWN)
+
+
+def test_a_numeric_range_is_not_a_citation():
+    assert not ends_with_citation("Scores fall in [0,1].", KNOWN)
+
+
+def test_a_repair_that_deletes_a_bracket_of_prose_is_refused():
+    """Only citations are stripped before the comparison. A repair that
+    removed "[0,1]" changed what the sentence says, and a check that
+    stripped every bracket would have called the two texts equal."""
+    original = "Use values [0,1] carefully."
+    candidate = "Use values carefully [chunk_a]."
+    retrieved = [make_result("chunk_a")]
+
+    assert rejection_reason(original, candidate, retrieved) == "the claims changed"

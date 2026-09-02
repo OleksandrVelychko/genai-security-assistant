@@ -13,7 +13,7 @@ whether a second model call is allowed to replace the first.
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 
 from genai_security_assistant.models.generation import Citation
 from genai_security_assistant.models.retrieval import RetrievedChunk
@@ -31,8 +31,12 @@ SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+(?=[A-Z(\"'\[])")
 
 # One citation with the space in front of it, so that removing it leaves
 # "approved." rather than "approved ." and two answers differing only in
-# where the citations sit compare equal.
-CITATION_MARKER = re.compile(r"\s*\[[^\[\]]+\]")
+# where the citations sit compare equal. The group is what decides
+# whether the bracket is a citation at all.
+CITATION_MARKER = re.compile(r"\s*\[([^\[\]]+)\]")
+
+# The last bracket of a sentence, for the placement check.
+TRAILING_BRACKET = re.compile(r"\[([^\[\]]+)\]$")
 
 
 def extract_citation_ids(answer_text: str) -> list[str]:
@@ -98,16 +102,27 @@ def sentences(answer_text: str) -> list[str]:
     return [part.strip() for part in parts if part.strip()]
 
 
-def ends_with_citation(sentence: str) -> bool:
-    """Say whether a sentence closes with a bracketed citation.
+def _cites(group: str, known: Collection[str]) -> bool:
+    """Whether one bracket points at a chunk the answer was given.
+    A bracket alone is not a citation. This corpus writes ranges as
+    "[0,1]" and prose ends "[above]", and reading either as a source
+    would report a sentence as cited when nothing cited it.
+    """
+    return any(part.strip() in known for part in group.split(","))
+
+
+def ends_with_citation(sentence: str, known: Collection[str]) -> bool:
+    """Say whether a sentence closes with a citation to a retrieved chunk.
     Trailing punctuation is stripped first: the model writes
     "...from an LLM [chunk_003]." with the period outside the bracket,
     and that is the format prompt v3 asks for.
     """
-    return sentence.rstrip().rstrip(".!?\"')").endswith("]")
+    trimmed = sentence.rstrip().rstrip(".!?\"')")
+    match = TRAILING_BRACKET.search(trimmed)
+    return match is not None and _cites(match.group(1), known)
 
 
-def uncited_sentences(answer_text: str) -> list[int]:
+def uncited_sentences(answer_text: str, known: Collection[str]) -> list[int]:
     """Positions of the sentences that do not end with a citation.
     Positions rather than a count, so a report can name the sentence
     instead of only saying how many were wrong.
@@ -115,18 +130,23 @@ def uncited_sentences(answer_text: str) -> list[int]:
     return [
         number
         for number, sentence in enumerate(sentences(answer_text), start=1)
-        if not ends_with_citation(sentence)
+        if not ends_with_citation(sentence, known)
     ]
 
 
-def claims(answer_text: str) -> list[str]:
+def claims(answer_text: str, known: Collection[str]) -> list[str]:
     """The sentences of an answer with every citation removed.
-    This is what a citation repair must leave untouched. Comparing the
-    rendered text instead would fail on the one change a repair is
-    allowed to make.
+    This is what a citation repair must leave untouched. Brackets that
+    cite nothing stay in: a repair that deleted "[0,1]" from a sentence
+    changed what the sentence says, and stripping it here would hide
+    exactly that.
     """
+
+    def drop(match: re.Match[str]) -> str:
+        return "" if _cites(match.group(1), known) else match.group(0)
+
     return [
-        " ".join(CITATION_MARKER.sub("", sentence).split())
+        " ".join(CITATION_MARKER.sub(drop, sentence).split())
         for sentence in sentences(answer_text)
     ]
 
@@ -137,22 +157,28 @@ def rejection_reason(
     retrieved: Sequence[RetrievedChunk],
 ) -> str | None:
     """Why a repair must not replace the answer, or None to take it.
-    Three ways a repair fails, one per check, and each was produced by a
-    real run: it rewrote the answer instead of the brackets, it cited an
-    id nobody supplied, or it reformatted the citations without moving
-    any of them onto a sentence.
+    Three ways a repair fails, in order of how bad they are, and two were
+    produced by real runs: it cited an id nobody supplied, it rewrote the
+    answer instead of the brackets, or it reformatted the citations
+    without moving any of them onto a sentence.
     """
-    if claims(candidate) != claims(original):
-        return "the claims changed"
+    known = {chunk.chunk_id for chunk in retrieved}
 
+    # Checked first, not last. An invented id is also an unknown bracket,
+    # so claims() leaves it in place and would report a rewrite instead.
     _, invented = split_citations(candidate, retrieved)
     if invented:
         return f"invented ids: {', '.join(invented)}"
 
+    if claims(candidate, known) != claims(original, known):
+        return "the claims changed"
+
     # Not "any uncited remain": a repair that fixes two of three
     # sentences is still worth taking, and citation_placement records
     # that the result is repaired rather than clean.
-    if len(uncited_sentences(candidate)) >= len(uncited_sentences(original)):
+    if len(uncited_sentences(candidate, known)) >= len(
+        uncited_sentences(original, known)
+    ):
         return "no fewer uncited sentences"
 
     return None

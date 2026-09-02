@@ -116,7 +116,13 @@ def main() -> None:
     args = parser.parse_args()
 
     settings = Settings()
-    answerer = RAGAnswerer.from_settings(prompt_version=args.prompt, live=args.live)
+    # repair_citations=False: this report is a record of how the prompts
+    # behaved, and the guardrail would rewrite the citations it measures.
+    # It would also spend a second call on every answer here, which is what
+    # the docstring above promises it does not do.
+    answerer = RAGAnswerer.from_settings(
+        prompt_version=args.prompt, live=args.live, repair_citations=False
+    )
     questions = load_questions(settings)
 
     rows = [

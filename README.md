@@ -1844,7 +1844,7 @@ identical prompt at `temperature: 0`, and the check passed both. `e03`
 reached full compliance by citing the same chunk four times, which moved a
 number and told a reader nothing.
 
-`FINAL_IMPROVEMENT.md` lists all eight.
+`FINAL_IMPROVEMENT.md` lists all nine.
 
 ### Layout
 

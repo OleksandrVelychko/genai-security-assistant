@@ -230,7 +230,8 @@ class RAGAnswerer:
         be shown to be better: same claims, no invented ids, fewer
         uncited sentences. Every other outcome ships the first answer.
         """
-        first = len(uncited_sentences(answer_text))
+        known = {chunk.chunk_id for chunk in results}
+        first = len(uncited_sentences(answer_text, known))
         if first == 0:
             return PlacedAnswer(
                 text=answer_text,
@@ -254,7 +255,26 @@ class RAGAnswerer:
             )
 
         system, user = render_repair(answer_text, results)
-        candidate = self.chat.complete(system, user)
+        try:
+            candidate = self.chat.complete(system, user)
+        except Exception as error:
+            # Deliberately broad. The repair is cosmetic and the answer
+            # already in hand is not, so every way a second call can fail -
+            # transport, rate limit, a body that will not parse - ends the
+            # same way: the first answer ships and the failure is recorded.
+            # Narrowing this to the exceptions known today would let an
+            # unlisted one throw away a correct answer, which is the one
+            # outcome this layer exists to prevent.
+            return PlacedAnswer(
+                text=answer_text,
+                placement="unrepaired",
+                attempts=2,
+                uncited=first,
+                uncited_before=first,
+                # A call that failed still went out.
+                from_cache=False,
+                note=f"the repair call failed: {type(error).__name__}",
+            )
         # Read here, before rejection_reason can return early. A refused
         # repair still made the call that this flag is about.
         repair_cached = getattr(self.chat, "last_was_cached", False)
@@ -275,7 +295,7 @@ class RAGAnswerer:
             text=candidate,
             placement="repaired",
             attempts=2,
-            uncited=len(uncited_sentences(candidate)),
+            uncited=len(uncited_sentences(candidate, known)),
             uncited_before=first,
             from_cache=repair_cached,
             note=None,

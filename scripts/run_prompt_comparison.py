@@ -146,7 +146,13 @@ def main() -> None:
 
     # One retriever, three prompts. Loading the index and the BM25 tables
     # three times would change nothing and cost three times as much.
-    answerer = RAGAnswerer.from_settings(live=args.live)
+    # repair_citations=False: this report is a record of how the prompts
+    # behaved, and the guardrail would rewrite the citations it measures.
+    # It would also spend a second call on every answer here, which is what
+    # the docstring above promises it does not do.
+    answerer = RAGAnswerer.from_settings(
+        live=args.live, repair_citations=False
+    )
 
     runs: dict[str, list[GroundedAnswer]] = {}
     for version in VERSIONS:

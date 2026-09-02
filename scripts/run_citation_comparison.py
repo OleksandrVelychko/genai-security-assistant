@@ -12,8 +12,8 @@ The repair is a second call, cached the first time it runs, so a second
 run of this script makes no request at all.
 
 Only the guidance cases are here. A triage run asks the corpus a question
-built from a CVE record, which this script has no record to build, and
-those two answers are covered by outputs/eval_results.md instead.
+built from a CVE record, which this script has no record to build. Those
+two answers take the same code path and have not been re-measured.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 import yaml
 
 from genai_security_assistant.config import Settings
-from genai_security_assistant.generation.answering import RAGAnswerer
+from genai_security_assistant.generation.answering import PlacedAnswer, RAGAnswerer
 from genai_security_assistant.generation.citations import sentences
 from genai_security_assistant.models.generation import GroundedAnswer
 
@@ -42,11 +42,11 @@ class Comparison:
     case_id: str
     question: str
     before: GroundedAnswer
-    after: GroundedAnswer
+    after: PlacedAnswer
 
     @property
     def repaired(self) -> bool:
-        return self.after.citation_placement == "repaired"
+        return self.after.placement == "repaired"
 
 
 def load_questions(settings: Settings) -> list[tuple[str, str]]:
@@ -64,9 +64,29 @@ def _flat(text: str) -> str:
     return " ".join(text.split())
 
 
-def _count(answer: GroundedAnswer, value: int) -> str:
+def _count(placed: PlacedAnswer, value: int) -> str:
     """One count cell, dashed where the guardrail had nothing to place."""
-    return "—" if answer.citation_placement == "not_applicable" else str(value)
+    return "—" if placed.placement == "not_applicable" else str(value)
+
+
+def place(answerer: RAGAnswerer, answer: GroundedAnswer) -> PlacedAnswer:
+    """Run the guardrail over an answer the first half already produced.
+    Asking the model a second time would answer the question twice, and
+    two answers to one question can differ - temperature 0 narrows that
+    and does not remove it. Repairing the first answer is what makes the
+    two halves differ in the guardrail and nothing else.
+    """
+    if answer.status != "answered":
+        return PlacedAnswer(
+            text=answer.answer_text,
+            placement="not_applicable",
+            attempts=1,
+            uncited=0,
+            uncited_before=0,
+            from_cache=True,
+            note=None,
+        )
+    return answerer.place_citations(answer.answer_text, answer.retrieved)
 
 
 def render_table(rows: list[Comparison]) -> list[str]:
@@ -78,10 +98,10 @@ def render_table(rows: list[Comparison]) -> list[str]:
     ]
     for row in rows:
         lines.append(
-            f"| `{row.case_id}` | {len(sentences(row.after.answer_text))} "
-            f"| {_count(row.before, row.before.uncited_count)} "
-            f"| {_count(row.after, row.after.uncited_count)} "
-            f"| `{row.after.citation_placement}` |"
+            f"| `{row.case_id}` | {len(sentences(row.after.text))} "
+            f"| {_count(row.after, row.after.uncited_before)} "
+            f"| {_count(row.after, row.after.uncited)} "
+            f"| `{row.after.placement}` |"
         )
     lines.append("")
     return lines
@@ -92,7 +112,7 @@ def render_refusals(rows: list[Comparison]) -> list[str]:
     Prints its own absence rather than disappearing: a missing section
     reads as a section nobody wrote, and this one is a result.
     """
-    refused = [row for row in rows if row.after.repair_note]
+    refused = [row for row in rows if row.after.note]
     lines = ["## Repairs the guardrail refused\n"]
     if not refused:
         lines += [
@@ -105,7 +125,7 @@ def render_refusals(rows: list[Comparison]) -> list[str]:
     lines += ["| Case | Reason | What shipped |", "|---|---|---|"]
     for row in refused:
         lines.append(
-            f"| `{row.case_id}` | {row.after.repair_note} "
+            f"| `{row.case_id}` | {row.after.note} "
             f"| the first answer, unchanged |"
         )
     lines.append("")
@@ -122,7 +142,7 @@ def render_answers(rows: list[Comparison]) -> list[str]:
             "**Guardrail off**\n",
             f"> {_flat(row.before.answer_text)}\n",
             "**Guardrail on**\n",
-            f"> {_flat(row.after.answer_text)}\n",
+            f"> {_flat(row.after.text)}\n",
         ]
     return lines
 
@@ -141,7 +161,7 @@ def main() -> None:
     before = [answerer.answer(question) for _, question in questions]
 
     answerer.repair_citations = True
-    after = [answerer.answer(question) for _, question in questions]
+    after = [place(answerer, answer) for answer in before]
 
     rows = [
         Comparison(case_id=case_id, question=question, before=first, after=second)
