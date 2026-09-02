@@ -26,6 +26,9 @@ from genai_security_assistant.orchestration.langgraph_flow import LangGraphTriag
 # The two nodes that call RAGAnswerer. Keep in sync with langgraph_flow.py:
 # a third one would silently lose its cache flag rather than fail.
 ANSWERING_NODES: tuple[NodeName, ...] = ("retrieve_guidance", "answer_from_documents")
+# The nodes whose work can be replayed from disk. The other three tools
+# read a file in this repository and have no cache to miss.
+CACHEABLE_NODES: tuple[NodeName, ...] = ("lookup_cve", *ANSWERING_NODES)
 
 NodeFunction = Callable[[TriageState], dict[str, Any]]
 
@@ -90,24 +93,19 @@ class TimedTriageFlow(LangGraphTriageFlow):
 
 def cache_flag(record: NodeRecord, state: TriageState) -> bool | None:
     """Say whether this node's expensive call was replayed from disk.
-    A tool call carries the flag on its observation. The two answering
-    nodes carry none, so it is read off the answer they left in the
-    state - only one of them runs on any path, so there is no question
-    which answer that is.
-
-    None wherever no call was made. An answer stopped by the score gate
-    is one of those: RAGAnswerer returns before the model is reached,
-    and the False it leaves behind would otherwise be counted as a
-    request that went out over the network.
+    None wherever the question does not arise: a node that called
+    nothing, a tool that reads a file in this repository, and an answer
+    the score gate stopped before the model was reached. False is left to
+    mean one thing - a call that could have been replayed and was not.
     """
+    if record.node not in CACHEABLE_NODES:
+        return None
     if record.observation is not None:
         return record.observation.from_cache
-    if record.node in ANSWERING_NODES:
-        guidance = state.get("guidance")
-        if guidance is None or guidance.status == "abstained_by_gate":
-            return None
-        return guidance.from_cache
-    return None
+    guidance = state.get("guidance")
+    if guidance is None or guidance.status == "abstained_by_gate":
+        return None
+    return guidance.from_cache
 
 def measure(flow: TimedTriageFlow, case: EvalCase, run_mode: RunMode) -> MeasuredRun:
     """Run one case and assemble a trace row for every node it executed.

@@ -19,7 +19,7 @@ from __future__ import annotations
 from collections import Counter
 from statistics import mean, median
 
-from genai_security_assistant.evaluation.labels import CACHEABLE_NODES
+from genai_security_assistant.evaluation.harness import CACHEABLE_NODES
 from genai_security_assistant.models.evaluation import (
     EvalResult,
     EvalSummary,

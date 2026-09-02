@@ -19,7 +19,10 @@ reader as well.
 
 from __future__ import annotations
 
-from genai_security_assistant.evaluation.harness import ANSWERING_NODES, MeasuredRun
+from genai_security_assistant.evaluation.harness import (
+    CACHEABLE_NODES,
+    MeasuredRun,
+)
 from genai_security_assistant.models.evaluation import (
     EvalCase,
     EvalError,
@@ -29,12 +32,7 @@ from genai_security_assistant.models.evaluation import (
     RunMode,
 )
 from genai_security_assistant.models.generation import GroundedAnswer
-from genai_security_assistant.models.graph import NodeName, TriageState, tool_calls
-
-# The nodes whose work can be replayed from disk. The other three tools
-# read a file in this repository, so their from_cache is False with no
-# request behind it. Keep in step with ANSWERING_NODES in harness.py.
-CACHEABLE_NODES: tuple[NodeName, ...] = ("lookup_cve", *ANSWERING_NODES)
+from genai_security_assistant.models.graph import TriageState, tool_calls
 
 
 def route_or_mode(state: TriageState) -> RouteOrMode:
