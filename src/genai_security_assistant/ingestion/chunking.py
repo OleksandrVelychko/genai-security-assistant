@@ -7,8 +7,15 @@ from __future__ import annotations
 
 import re
 
-from genai_security_assistant.ingestion.metadata import build_chunk_id, build_chunk_metadata
-from genai_security_assistant.models.documents import Chunk, NormalizedDocument, NormalizedSection
+from genai_security_assistant.ingestion.metadata import (
+    build_chunk_id,
+    build_chunk_metadata,
+)
+from genai_security_assistant.models.documents import (
+    Chunk,
+    NormalizedDocument,
+    NormalizedSection,
+)
 
 _SENTENCE_RE = re.compile(r"(?<=[.!?])\s+")
 
@@ -207,7 +214,9 @@ def chunk_document(
     index = 0
 
     for section in coalesce_sections(document.sections, min_chunk_size):
-        for text in chunk_section_text(section.text, chunk_size, overlap, min_chunk_size):
+        for text in chunk_section_text(
+                section.text, chunk_size, overlap, min_chunk_size
+        ):
             index += 1
             chunks.append(
                 Chunk(

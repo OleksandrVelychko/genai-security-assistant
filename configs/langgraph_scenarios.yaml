@@ -1,0 +1,92 @@
+# Examples for outputs/langgraph_examples.md.
+#
+# Prose is written by hand; every route, node, call, observation, state and
+# answer is filled in by scripts/run_langgraph_examples.py from a real run.
+# An example with confirm: true executes a write.
+#
+# The assignment asks for three. The fourth is here because the write gate
+# is the one place where making a step into a node changed its behavior.
+
+examples:
+  - id: g1
+    goal: "Does CVE-2025-68664 affect us?"
+    confirm: true
+    why: |
+      The whole graph, and the only run that reaches every node it can.
+
+      Ten of twelve nodes execute. The two that do not are the other two
+      branches out of `classify_request`, which is what a conditional edge
+      is for: the route was decided once, at the first node, and eight
+      nodes downstream ran because of that decision rather than because
+      anyone listed them.
+
+      Compare the trace against HW6's. The eight steps in the middle are
+      the same eight, in the same order, with the same calls. What the
+      graph added is a node at each end.
+
+  - id: g2
+    goal: "Does CVE-2025-68664 affect us?"
+    confirm: false
+    why: |
+      The same goal, one flag different, and the node that reads it.
+
+      `confirm_write` runs and writes `write_authorized: false`. The edge
+      under it reads that field and goes to `build_answer` instead of
+      `record_finding`. Nothing reaches `data/findings.jsonl`.
+
+      The field exists because of a defect this port introduced. HW6's
+      `confirm_write` returned a boolean that `run_triage` had to read, so
+      a workflow that skipped the gate could not compile. A graph has no
+      such coupling: an edge reads a field, and a field a node never wrote
+      still holds its default. The first version of that edge read
+      `pending_confirmation`, whose default is `false` - and so a graph
+      with the gate removed would have written every time.
+
+  - id: g3
+    goal: "Does CVE-2025-67644 affect us?"
+    confirm: false
+    why: |
+      The run that stops early, and the edge that stops it.
+
+      One deployed service runs the affected component, and it is already
+      on the fixed version. `assess_exposure` concludes `patched`, and the
+      edge under it sends the run straight to `build_answer`.
+
+      Five nodes of twelve. The seven that did not run include
+      `retrieve_guidance`, the only node on this branch that spends a model
+      call. That is the practical shape of conditional routing: not a
+      tidier diagram, but a model call not made because the state already
+      settled the question.
+
+  - id: g4
+    goal: "Are we affected by that LangChain bug?"
+    confirm: false
+    why: |
+      A route that runs no tool and asks nothing of the corpus.
+
+      Three nodes: classify, ask, answer. `classify_request` finds no
+      identifier and writes the question that `build_answer` returns.
+
+      Worth including because it is the cheapest run the graph can do, and
+      because its trace shows the two nodes HW6 had no name for. In HW6
+      this route completed "1 of 1" planned steps while the router and the
+      answer composer ran outside the count. Here everything that happened
+      is in the trace.
+
+# Every outcome the workflow can reach, executed for the summary table.
+# The four examples cover four of them; the other three are here.
+paths:
+  - goal: "Does CVE-2025-68664 affect us?"
+    confirm: true
+  - goal: "Does CVE-2025-68664 affect us?"
+    confirm: false
+  - goal: "Does CVE-2025-67644 affect us?"
+    confirm: false
+  - goal: "Does CVE-2024-5565 affect us?"
+    confirm: false
+  - goal: "Does CVE-2023-99999 affect us?"
+    confirm: false
+  - goal: "How do I prevent prompt injection?"
+    confirm: false
+  - goal: "Are we affected by that LangChain bug?"
+    confirm: false

@@ -1,6 +1,7 @@
 """Unit tests for the retrieval data contracts."""
 
 from __future__ import annotations
+
 from datetime import datetime, timezone
 
 import pytest
@@ -14,15 +15,15 @@ from genai_security_assistant.models.retrieval import (
 
 
 def make_meta(**overrides):
-    base = dict(
-        provider="openai",
-        model="text-embedding-3-small",
-        dimension=1536,
-        chunks_count=3,
-        chunks_digest=chunks_digest(["a", "b", "c"]),
-        source_chunks_path="data/processed/chunks.jsonl",
-        built_at=datetime.now(timezone.utc),
-    )
+    base = {
+        "provider": "openai",
+        "model": "text-embedding-3-small",
+        "dimension": 1536,
+        "chunks_count": 3,
+        "chunks_digest": chunks_digest(["a", "b", "c"]),
+        "source_chunks_path": "data/processed/chunks.jsonl",
+        "built_at": datetime.now(timezone.utc),
+    }
     base.update(overrides)
     return IndexMeta(**base)
 
