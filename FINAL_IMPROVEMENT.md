@@ -173,12 +173,14 @@ a user. The design does not depend on the prompt being right.
 
 ## How it was tested
 
-- **22 new unit tests** - 11 in `tests/unit/generation/test_citations.py`
-  for the splitter, the placement check and all three rejection reasons; 11
-  in `tests/unit/generation/test_answering.py` for the pipeline, including
+- **26 new unit tests** - 14 in `tests/unit/generation/test_citations.py`
+  for the splitter, the placement check, all three rejection reasons, and
+  the brackets that are not citations at all (`[0,1]`, `[above]`); 12 in
+  `tests/unit/generation/test_answering.py` for the pipeline, including
   that a compliant answer costs one call, that an abstention is never sent
-  for repair, and that a replayed answer with a live repair reports a
-  network call. Suite: **299 passing**, `ruff` clean.
+  for repair, that a replayed answer with a live repair reports a network
+  call, and that a repair call which raises leaves the answer intact.
+  Suite: **303 passing**, `ruff` clean.
 - **The splitter was run over all twelve real answers** in
   `outputs/eval_results.csv` before it became library code. No false
   splits, including `1.2.9`, `nvd@nist.gov` and `#sec-conversational-ai`.
