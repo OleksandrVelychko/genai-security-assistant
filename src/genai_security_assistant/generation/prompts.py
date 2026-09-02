@@ -215,6 +215,51 @@ def get_prompt(version: str) -> PromptTemplate:
         )
     return PROMPTS[version]
 
+# --- the repair pass ------------------------------------------------------
+# Not a PromptTemplate: that class renders a question against chunks, and
+# this renders a finished answer against them. The wording below is the
+# fourth tried against e01. Two earlier ones read as stricter and both
+# made the result worse - one had the model paste a chunk in as three new
+# sentences, the other had it reformat [a, b] into [a][b] and move
+# nothing. Asking for a transformation, and naming the state the answer
+# starts in, is what this one does differently. All four runs are in
+# FINAL_IMPROVEMENT.md.
+REPAIR_SYSTEM = (
+    "You move citation markers inside an answer. You never change what "
+    "the answer says.\n"
+    "\n"
+    "The answer below carries its citations in one place, usually at the "
+    "end. Distribute them across the sentences they support.\n"
+    "\n"
+    "Rules:\n"
+    "1. Every factual sentence ends with the ids of the chunks that "
+    "support that sentence: [id], or [id][id] when two support it.\n"
+    "2. Keep the sentences exactly as they are - same wording, same "
+    "order, same number. Do not copy text out of a chunk.\n"
+    "3. Use only ids that appear in the <chunk> blocks. Never invent one.\n"
+    "4. Put one space before the opening bracket.\n"
+    "5. Leave a sentence uncited when no chunk supports it.\n"
+    "6. Output the rewritten answer and nothing else."
+)
+
+REPAIR_USER_TEMPLATE = (
+    "Context:\n{context}\n\nAnswer to re-cite:\n{answer}\n\nRewritten answer:"
+)
+
+
+def render_repair(
+    answer_text: str, chunks: Sequence[RetrievedChunk]
+) -> tuple[str, str]:
+    """Return (system message, user message) for one citation repair.
+    Only the template goes through .format(), for the reason
+    PromptTemplate.render gives: the chunks carry Python snippets full of
+    braces, and an answer quoting them carries the same.
+    """
+    return REPAIR_SYSTEM, REPAIR_USER_TEMPLATE.format(
+        context=render_context(chunks),
+        answer=answer_text,
+    )
+
 def normalize(text: str) -> str:
     """Collapse all whitespace, so line breaks do not hide a match."""
     return " ".join(text.split()).lower()
