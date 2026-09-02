@@ -1586,6 +1586,175 @@ write node directly, the way a rewiring mistake would, and holds it there.
     outputs/
       langgraph_examples.md         # generated report (HW7 deliverable)
 
+## HW8 - Evaluation and observability
+
+Twelve questions, run through the HW7 graph, with a stopwatch on every
+node and a table that says what each run did and how good it was.
+
+`case -> graph run -> trace + labels -> metrics -> report`
+
+The point is not that the assistant answers. HW4 through HW7 established
+that. The point is that a number now exists for how well it answers, that
+the number can be re-derived from a file rather than remembered, and that
+the run which produced it can be read node by node.
+
+### The eval set
+
+`configs/eval_cases.yaml` holds twelve cases covering the six scenarios
+the assignment asks for: a plain knowledge-base question, one needing two
+documents, one where retrieval is known to struggle, three refusals, four
+needing a tool, and two that are ambiguous or adversarial.
+
+Between them they take all three routes, call all four tools, execute all
+twelve nodes and reach ten of the eleven targets the five conditional
+edges can select.
+
+Six of the questions are reused from HW2 and HW3, so their query vectors
+are already frozen in `index/query_vectors.npz` and retrieval repeats
+exactly. Their answers were not stored, so what the model produced for
+this report is new.
+
+### What a person judges, and what a check proves
+
+The columns split in three, and the split is the design:
+
+| Filled in by | Columns |
+|---|---|
+| Written before the run | `question`, `expected_behavior`, `expected_route`, `expected_mode` |
+| Derived from the run | `answer`, `retrieved_chunks`, `route_or_mode`, `tools_used`, `groundedness`, `latency_ms`, part of `errors` |
+| Written by hand after | `task_success`, `answer_quality`, `notes`, the rest of `errors` |
+
+`models/evaluation.py` splits the error vocabulary the same way.
+`DETECTED_ERRORS` are the ones a check can prove - a branch that differs
+from its expectation, a failed call, a citation that resolves to nothing.
+`JUDGED_ERRORS` are the ones nothing here can: whether an answer invented
+something, or leaned on the wrong chunk. A test asserts the two halves
+cover the vocabulary exactly, so a new error type cannot be added without
+deciding who is responsible for it.
+
+Two rules decided the hand-written labels. `task_success` asks whether
+what `expected_behavior` described actually happened - not whether the
+answer was useful. `answer_quality` asks how good the answer is against
+what the corpus could have given, not against what retrieval handed it.
+Both are stated at the top of `configs/eval_cases.yaml` so they can be
+argued with as a pair rather than one row at a time.
+
+### The trace
+
+`evaluation/harness.py` subclasses `LangGraphTriageFlow` and replaces each
+of the twelve node attributes with a timed wrapper before `super().__init__`
+runs - which is the call that runs `build_graph`, and `build_graph`
+registers whatever `self.<node>` resolves to at that moment. The workflow
+is untouched: the order still lives in one method in `langgraph_flow.py`.
+
+The timer sits inside the node rather than between two stream events. The
+interval between events also holds the framework's merge work and, for the
+first node, the cost of starting the graph, so a row measured that way
+would report a number and name it after a node that did not spend it.
+
+Every executed node becomes one line of
+`outputs/eval_traces_{live,cached}.jsonl`: which case, which node, in what
+order, how long, what it wrote to state, what it called, and whether the
+call was replayed from disk.
+
+### How to run it
+
+```bash
+uv run python scripts/run_eval.py          # replays index/*.json
+uv run python scripts/run_eval.py --live   # calls OpenAI and NVD
+```
+
+`--live` runs the twelve cases twice, live first and then out of the cache
+the live half has just filled, so one report can put the two latencies
+side by side. The committed files come from a `--live` run.
+
+Without a key, the cached half alone still measures something real:
+retrieval, the graph and the disk all execute, and only the network is
+replayed.
+
+### Results
+
+Full table in `outputs/eval_results.csv` and `outputs/eval_results.md`,
+metrics in `outputs/eval_summary.md`, analysis in
+`outputs/quality_report.md`.
+
+| | |
+|---|---|
+| Task success | 10 of 12, two partial, no failures |
+| Groundedness | good on all 6 cases where it applies |
+| Routing | 12 of 12 routes and modes as expected |
+| Errors | `missing_context` 2, `tool_error` 1, none 9 |
+| Retrieved chunks never cited | 13 of 30, across the six answered cases |
+
+The single `tool_error` belongs to the case that asks about a CVE which
+does not exist. An empty NVD result is the answer that case was written to
+get, which is why the errors column describes and `task_success` judges.
+
+Both partial cases are the same failure: a question whose answer spans two
+documents received one of them.
+
+### What the numbers do not say
+
+`groundedness_good_rate` checks that every citation resolves to a chunk
+that was actually retrieved. It says nothing about where the citation
+sits, and five of the six answered cases bundle every citation at the end
+of a paragraph rather than after the sentence it supports - which is what
+rule 3 of prompt v3 asks for. Nothing here notices.
+
+Nor does anything measure whether a cited chunk supports the sentence it
+is attached to. That is the difference between a citation being real and a
+citation being right, and only a reader closes it.
+
+The headline groundedness rate is also bounded by the shape of the set: a
+case that asks a tool rather than the corpus has no context to be grounded
+in, so `eval_summary.md` prints the same count over both denominators.
+
+### Known limitations
+
+**The set confirms more than it discovers.** Most of these questions come
+from HW2 through HW5, where their behaviour was already documented. That
+makes the run reproducible and the expectations honest, and it also means
+a first run was never going to be a surprise.
+
+**One edge is never taken.** `check_asset_inventory -> halt` fires only
+when the inventory itself fails to answer, and no case here breaks the
+file it reads.
+
+**Latency is not reproducible without a key.** The cached run rebuilds
+from a fresh clone; the live column cannot. The two are printed together
+so the difference is visible rather than assumed.
+
+**Twelve cases is a small sample.** A rate of 10/12 moves by 8 points if
+one case is re-judged. The counts are worth more than the percentages
+here, which is why both are printed.
+
+### Layout
+
+```text
+configs/
+  eval_cases.yaml             # the twelve cases and their labels
+  eval_conclusions.md         # notes, appended to the metrics report
+src/genai_security_assistant/
+  models/evaluation.py        # EvalCase, NodeTiming, EvalResult, EvalSummary
+  evaluation/
+    harness.py                # the timed graph, and one measured run
+    labels.py                 # a run read into route, mode, groundedness, errors
+    metrics.py                # the run counted into numbers
+    reporting.py              # csv, markdown and jsonl writers
+scripts/
+  run_eval.py                 # thin CLI: run, measure, write
+outputs/
+  eval_results.csv            # the eval table, as data
+  eval_results.md             # the eval table, with every answer in full
+  eval_summary.md             # observability metrics
+  eval_traces_live.jsonl      # one line per executed node, live run
+  eval_traces_cached.jsonl    # the same, replayed
+  quality_report.md           # what was tested, and the three main problems
+tests/unit/evaluation/
+  test_labels.py
+  test_eval_metrics.py
+```
+
 ## License and attribution
 
 Source documents are © OWASP Foundation, licensed **CC-BY-SA 4.0**. Attribution
