@@ -214,24 +214,24 @@
     }
   },
   "CVE-2023-99999": {
-    "fetched_at": "2026-09-02 16:06:41Z",
+    "fetched_at": "2026-09-02 16:58:08Z",
     "payload": {
       "format": "NVD_CVE",
       "resultsPerPage": 0,
       "startIndex": 0,
-      "timestamp": "2026-09-02T16:06:41.616",
+      "timestamp": "2026-09-02T16:58:08.756",
       "totalResults": 0,
       "version": "2.0",
       "vulnerabilities": []
     }
   },
   "CVE-2024-5565": {
-    "fetched_at": "2026-09-02 16:06:16Z",
+    "fetched_at": "2026-09-02 16:58:01Z",
     "payload": {
       "format": "NVD_CVE",
       "resultsPerPage": 1,
       "startIndex": 0,
-      "timestamp": "2026-09-02T16:06:16.666",
+      "timestamp": "2026-09-02T16:58:01.321",
       "totalResults": 1,
       "version": "2.0",
       "vulnerabilities": [
@@ -534,12 +534,12 @@
     }
   },
   "CVE-2025-68664": {
-    "fetched_at": "2026-09-02 16:06:03Z",
+    "fetched_at": "2026-09-02 16:57:47Z",
     "payload": {
       "format": "NVD_CVE",
       "resultsPerPage": 1,
       "startIndex": 0,
-      "timestamp": "2026-09-02T16:06:03.026",
+      "timestamp": "2026-09-02T16:57:47.765",
       "totalResults": 1,
       "version": "2.0",
       "vulnerabilities": [
@@ -749,12 +749,12 @@
     }
   },
   "CVE-2026-34070": {
-    "fetched_at": "2026-09-02 16:06:09Z",
+    "fetched_at": "2026-09-02 16:57:54Z",
     "payload": {
       "format": "NVD_CVE",
       "resultsPerPage": 1,
       "startIndex": 0,
-      "timestamp": "2026-09-02T16:06:09.810",
+      "timestamp": "2026-09-02T16:57:54.562",
       "totalResults": 1,
       "version": "2.0",
       "vulnerabilities": [
