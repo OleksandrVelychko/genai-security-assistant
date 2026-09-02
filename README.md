@@ -1764,6 +1764,111 @@ tests/unit/evaluation/
   test_eval_metrics.py
 ```
 
+## Final improvement - citation placement
+
+Prompt v3 rule 3 has asked for a citation after each factual sentence
+since HW4. The HW8 run recorded that five of the six answered cases put
+every citation at the end of the paragraph instead, and that nothing in
+the evaluation layer noticed.
+
+`answer -> check placement -> repair once -> accept or discard`
+
+This adds the check the rule never had. It is deliberately not a stricter
+prompt: two stricter prompts were tried and both made the output worse.
+What makes the layer safe is that the repair has to earn its place.
+
+### What the check is
+
+Three pure functions in `generation/citations.py`, none of which calls
+anything:
+
+- `sentences` splits an answer on terminal punctuation followed by
+  whitespace and an opening character. `1.2.9` and `nvd@nist.gov` keep
+  their periods because no space follows them.
+- `uncited_sentences` returns the positions that do not end with a
+  bracketed id, allowing for the period the model puts outside it.
+- `claims` returns the sentences with every citation removed. Two answers
+  that differ only in where their citations sit compare equal.
+
+### How a repair earns its place
+
+`rejection_reason` returns the reason to discard a repair, or `None` to
+take it. The three are checked in order of severity:
+
+1. **the claims changed** - `claims` differs, so the repair rewrote the
+   answer instead of the brackets.
+2. **invented ids** - the repair cited a chunk the answer was never given.
+3. **no fewer uncited sentences** - the repair moved nothing.
+
+Any of the three ships the first answer with `citation_placement:
+unrepaired` and the reason in `repair_note`. Nothing correct is withheld:
+the system fails closed on an invented id and degrades on placement, so a
+formatting fault never costs the reader a correct answer.
+
+### How to run it
+
+```bash
+uv run python scripts/run_citation_comparison.py    # writes the report
+uv run python scripts/rag_answer.py -q "..."        # guardrail on
+uv run python scripts/rag_answer.py -q "..." --no-repair
+```
+
+The comparison answers every guidance case twice, once with
+`repair_citations` off and once on. Both halves replay from
+`index/answers_cache.json`, so the table reproduces on a clean clone with
+no API key.
+
+`repair_citations` in `configs/base.yaml` is the default; `--no-repair`
+overrides it for one run.
+
+Do not pass `--live` to either script to regenerate this report. It sets
+`read_cache=False` and rewrites the cached answers that HW4 through HW8
+quote.
+
+### Results
+
+Report in `outputs/citation_comparison.md`, analysis in
+`configs/citation_conclusions.md`, the write-up with before/after cases
+and limitations in `FINAL_IMPROVEMENT.md`.
+
+Over the four guidance cases that produce citations: seven of their
+fourteen sentences ended without a citation, and none does now. One of the
+four answers met the contract before; four do now. The three abstentions
+are untouched and cost no call.
+
+### Known limitations
+
+The check asks where a citation sits, never whether the chunk supports the
+sentence. `e01` produced two different attributions across two runs of the
+identical prompt at `temperature: 0`, and the check passed both. `e03`
+reached full compliance by citing the same chunk four times, which moved a
+number and told a reader nothing.
+
+`FINAL_IMPROVEMENT.md` lists all eight.
+
+### Layout
+
+```text
+configs/
+  base.yaml                        # repair_citations
+  citation_conclusions.md          # notes, appended to the comparison
+src/genai_security_assistant/
+  generation/
+    citations.py                   # sentences, placement, rejection_reason
+    prompts.py                     # REPAIR_SYSTEM, render_repair
+    answering.py                   # place_citations, and the accept rule
+  models/generation.py             # CitationPlacement and four fields
+  evaluation/                      # four columns, citation_compliance_rate
+scripts/
+  run_citation_comparison.py       # the guardrail off and on, one table
+outputs/
+  citation_comparison.md           # the before/after report
+tests/unit/generation/
+  test_citations.py                # the splitter and all three refusals
+  test_answering.py                # the pipeline, and what it will not repair
+FINAL_IMPROVEMENT.md               # the write-up this section summarises
+```
+
 ## License and attribution
 
 Source documents are © OWASP Foundation, licensed **CC-BY-SA 4.0**. Attribution
