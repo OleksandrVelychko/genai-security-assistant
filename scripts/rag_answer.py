@@ -87,6 +87,11 @@ def parse_args() -> argparse.Namespace:
         help="Call the API even if the answer is cached, and overwrite it.",
     )
     parser.add_argument(
+        "--no-repair",
+        action="store_true",
+        help="Skip the citation repair pass and answer as the pipeline did before.",
+    )
+    parser.add_argument(
         "--show-prompt",
         action="store_true",
         help="Print the prompt that would be sent, and stop.",
@@ -117,6 +122,14 @@ def print_answer(answer: GroundedAnswer) -> None:
     print(f"Grounded: {answer.is_grounded}")
     print(f"Sources:  {', '.join(answer.sources) or '-'}")
     print(f"Cited:    {', '.join(c.chunk_id for c in answer.citations) or '-'}")
+    if answer.status == "answered":
+        print(
+            f"Placed:   {answer.citation_placement} "
+            f"({answer.uncited_before_repair} -> {answer.uncited_count} uncited, "
+            f"{answer.generation_attempts} call(s))"
+        )
+    if answer.repair_note:
+        print(f"Repair:   {answer.repair_note}")
     if answer.unsupported_citations:
         # Printed only when it happens, so it reads as the alarm it is.
         print(f"INVENTED: {', '.join(answer.unsupported_citations)}")
@@ -125,7 +138,12 @@ def print_answer(answer: GroundedAnswer) -> None:
 def main() -> None:
     args = parse_args()
 
-    answerer = RAGAnswerer.from_settings(prompt_version=args.prompt, live=args.live)
+    answerer = RAGAnswerer.from_settings(
+        prompt_version=args.prompt,
+        live=args.live,
+        # None, not True: without the flag the config decides.
+        repair_citations=False if args.no_repair else None,
+    )
     if args.top_k:
         answerer.top_k = args.top_k
 

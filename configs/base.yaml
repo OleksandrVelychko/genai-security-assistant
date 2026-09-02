@@ -60,6 +60,9 @@ paths:
   # other mode's rows, and merge logic is what fails without saying so.
   eval_traces_live: "outputs/eval_traces_live.jsonl"
   eval_traces_cached: "outputs/eval_traces_cached.jsonl"
+  # Final improvement
+  citation_comparison: "outputs/citation_comparison.md"
+  citation_conclusions: "configs/citation_conclusions.md"
 
 chunking:
   chunk_size: 700          # target characters (assignment range: 500-1000)
@@ -126,6 +129,13 @@ generation:
   # What the gate can't do, the refusal rule in the prompt does, and
   # outputs/rag_answers_examples.md shows it doing so on two questions.
   min_score: 0.40
+  # Citation placement, enforced rather than asked for. Rule 3 of prompt
+  # v3 already asks for an id after each factual sentence, and five of
+  # six answers ignored it. An answer that ignores it now gets one repair
+  # pass, accepted only when it leaves the claims untouched and fewer
+  # sentences uncited. false runs the pipeline as it was, which is how
+  # the before column in FINAL_IMPROVEMENT.md is produced.
+  repair_citations: true
 
 retrieval:
   top_k: 5
