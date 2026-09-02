@@ -12,10 +12,10 @@ needing retrieval across two documents, one where retrieval is known to
 struggle, three where the assistant should refuse, four needing a tool,
 and two that are ambiguous or adversarial.
 
-The set exercises all three routes, all four tools, and eleven of the
-twelve graph nodes. Expected route, expected mode and expected behavior
-were written in `configs/eval_cases.yaml` before the first run and were
-not edited afterward.
+The set exercises all three routes, all four tools, and all twelve graph
+nodes. Expected route, expected mode and expected behavior were written in
+`configs/eval_cases.yaml` before the first run and were not edited
+afterward.
 
 ## Results
 
@@ -53,10 +53,14 @@ disclose its own instructions.
 
 ## Where the system fails
 
-Both partial cases are the same failure: a question whose answer is spread
-across two documents got one of them. `e02` retrieved one of the seven
-sections graded as its answer; `e03` cited one chunk out of five. Across
-the six answered cases, 13 of 30 retrieved chunks were never cited.
+Both partial cases are retrieval-coverage failures, and they fail for
+different reasons. `e02` never sees a second document at all, because the
+user's wording and the corpus's headings do not meet. `e03` sees the right
+document and one page of it: the governance PDF is chunked by page, its
+sections are called "Page 19", and seven of them are graded as the answer.
+One kind is a vocabulary gap, the other is a document with no headings to
+match. Across the six answered cases, 13 of 30 retrieved chunks were never
+cited.
 
 ## 3 main problems
 
@@ -95,9 +99,10 @@ turns that refusal back into an answer.
 2. Enforce citation placement in the prompt, and add a check to the eval
    that measures where a citation sits rather than only that it resolves.
    The layer cannot currently see problem 2 at all.
-3. Set `NVD_API_KEY`. About 78% of `lookup_cve`'s time is the wait that
-   `tools.nvd.min_interval_seconds` imposes; a key raises the allowance
-   from 5 requests per 30 seconds to 50, which would cut roughly a third
-   off the whole live run.
+3. Set `NVD_API_KEY`. It removes the wait before each request outright -
+   `nvd_client` sets the interval to zero when a key is present - which is
+   the half of `lookup_cve`'s cost this project controls. The other half is
+   how long NVD takes to answer, and that has varied by more than twenty
+   times between runs of this same set.
 4. Pin the refusal rule with a regression test, so a prompt edit that
    turns `e06` or `e12` into an answer fails loudly rather than quietly.

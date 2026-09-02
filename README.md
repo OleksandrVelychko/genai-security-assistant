@@ -1690,8 +1690,10 @@ The single `tool_error` belongs to the case that asks about a CVE which
 does not exist. An empty NVD result is the answer that case was written to
 get, which is why the errors column describes and `task_success` judges.
 
-Both partial cases are the same failure: a question whose answer spans two
-documents received one of them.
+Both partial cases are retrieval-coverage failures with different causes.
+`e02` misses a second document because the user's vocabulary and the
+corpus's headings do not meet. `e03` retrieves one of several relevant
+pages from a PDF whose sections carry no heading to match on.
 
 ### What the numbers do not say
 
@@ -1723,6 +1725,13 @@ file it reads.
 **Latency is not reproducible without a key.** The cached run rebuilds
 from a fresh clone; the live column cannot. The two are printed together
 so the difference is visible rather than assumed.
+
+**A live run does not invalidate the labels it invalidates.** `--live`
+fetches new answers, and the verdicts in `configs/eval_cases.yaml` stay
+where they were. temperature 0 makes the text usually identical, not
+reliably so, and a changed answer under an unchanged verdict is invisible.
+Storing a hash of the answer that was judged, beside the judgment, would
+make it loud instead.
 
 **Twelve cases is a small sample.** A rate of 10/12 moves by 8 points if
 one case is re-judged. The counts are worth more than the percentages

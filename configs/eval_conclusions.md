@@ -9,25 +9,30 @@ The cached run is what a clone with no API key reproduces. Its latencies
 measure retrieval, the graph and the disk - a real pipeline, minus the
 network. The live run is the one the table above describes.
 
-### The most expensive node is the most predictable one
+### The most expensive node, and which half of it we control
 
 `lookup_cve` is the largest entry in "Where the time goes" and it does no
-thinking: it reads a JSON record. Around 78% of its time is the wait that
-tools.nvd.min_interval_seconds imposes, not the request.
+thinking: it reads a JSON record. Its time is two things added together -
+the wait that tools.nvd.min_interval_seconds imposes before the request,
+and however long NVD takes to answer it.
 
-That wait is deterministic, so the node holds its total to within 2% over
-repeated runs, while a single model call beside it can vary by a factor of
-three. `e10_triage_unknown_record` is the clearest case: it executes three
-nodes, makes no model call, and stays within 3% of itself run to run,
-because it is six seconds of sleeping plus one round trip. Re-measure both
-with `uv run python scripts/run_eval.py --live` and read the node column of
+Only the first is ours. Across repeated runs the split between them has
+moved from roughly three-quarters wait to roughly three-quarters upstream,
+because the same endpoint has answered both in under a second and in about
+nineteen. Derive the split for any run by subtracting the work done since
+the previous request from six seconds, node by node, in
 outputs/eval_traces_live.jsonl.
 
-Two things follow. A maximum is a weak statistic here - the slowest case
-changes between runs on one unlucky model call, while the medians stay
-comparable. And the cheapest latency available to this system is an NVD API
-key: the same file that sets the interval records that a key raises the
-allowance from 5 requests per 30 seconds to 50.
+Two things follow, and neither is about our code. A maximum is a weak
+statistic here: the slowest case has changed between every pair of runs so
+far, on one slow call. And timeout_seconds is 20 while a request has come
+back at about 19, so a slower answer turns a case that reports a CVE into
+one that reports upstream_error, taking its verdict with it.
+
+An API key is worth setting, and it fixes the half we own rather than the
+half we do not: nvd_client sets the interval to zero outright when a key
+is present, which removes the wait and leaves the upstream exactly as it
+was.
 
 ### What the framework costs
 
@@ -41,7 +46,7 @@ run, where the whole set finishes in a couple of milliseconds per case, it
 is most of the time spent. The same absolute cost, read two opposite ways,
 which is why both rows are in the table.
 
-### What this eval can't see
+### What this eval cannot see
 
 groundedness_good_rate reads 100% over the cases where it applies, and that
 measures one thing only: every citation resolves to a chunk that was
