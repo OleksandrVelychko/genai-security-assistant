@@ -1,0 +1,78 @@
+# Mock deployment inventory for the HW6 triage workflow.
+#
+# Stands in for two systems this project doesn't have: an SBOM tool such as
+# OWASP Dependency-Track, which answers "which deployed services run a
+# component this CVE affects", and a service catalog, which answers "who is
+# accountable for that service".
+#
+# Components and fixed versions are taken from the CVE descriptions already
+# in index/cve_cache.json, so the mock can't contradict the record
+# lookup_cve returns for the same identifier. Read one with:
+#   uv run python scripts/external_tool.py -t lookup_cve -a cve_id=CVE-2025-68664
+#
+# fixed_version is one value per service, not per release line. CVE-2025-68664
+# is patched in both 0.3.81 and 1.2.5, and a service runs one of those lines.
+#
+# service_id must match ^svc-[a-z0-9-]+$: get_service_owner accepts nothing
+# else, and it's called with a value this file supplies.
+
+exposures:
+  # LangChain serialization injection, patched in 0.3.81 and 1.2.5.
+  CVE-2025-68664:
+    - service_id: "svc-chat-gateway"
+      service_name: "Customer chat gateway"
+      component: "langchain-core"
+      installed_version: "0.3.74"
+      fixed_version: "0.3.81"
+      environment: "production"
+      internet_facing: true
+    - service_id: "svc-doc-indexer"
+      service_name: "Document indexing worker"
+      component: "langchain-core"
+      installed_version: "0.3.81"
+      fixed_version: "0.3.81"
+      environment: "staging"
+      internet_facing: false
+
+  # LangGraph SQLite checkpoint SQL injection, fixed in 3.0.1.
+  CVE-2025-67644:
+    - service_id: "svc-agent-runtime"
+      service_name: "Agent execution runtime"
+      component: "langgraph-checkpoint-sqlite"
+      installed_version: "3.0.1"
+      fixed_version: "3.0.1"
+      environment: "production"
+      internet_facing: false
+
+  # Prompt-loading path traversal, patched in 1.2.22. installed_version is
+  # 1.2.9 on purpose: "1.2.9" sorts above "1.2.22" as a string, so a string
+  # comparison calls this service patched and a numeric one does not.
+  CVE-2026-34070:
+    - service_id: "svc-prompt-studio"
+      service_name: "Prompt authoring studio"
+      component: "langchain-core"
+      installed_version: "1.2.9"
+      fixed_version: "1.2.22"
+      environment: "staging"
+      internet_facing: false
+
+# CVE-2024-5565 is deliberately absent. It affects the Vanna library, which
+# nothing here runs, and the flow has to be able to conclude that.
+
+owners:
+  svc-chat-gateway:
+    team: "Conversational AI"
+    contact: "chat-ai@example.com"
+    escalation_channel: "#sec-conversational-ai"
+  svc-doc-indexer:
+    team: "Knowledge Platform"
+    contact: "knowledge-platform@example.com"
+    escalation_channel: "#sec-knowledge-platform"
+  svc-agent-runtime:
+    team: "Agent Platform"
+    contact: "agent-platform@example.com"
+    escalation_channel: "#sec-agent-platform"
+  svc-prompt-studio:
+    team: "Agent Platform"
+    contact: "agent-platform@example.com"
+    escalation_channel: "#sec-agent-platform"
